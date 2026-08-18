@@ -1,0 +1,8 @@
+.idea/
+.gradle/
+.intellijPlatform/
+/build/
+/event-spy/build/
+/out/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
