@@ -1,0 +1,340 @@
+<idea-plugin>
+    <id>org.bitstrings.idea.plugins.MavenPrime</id>
+    <name>Maven Prime</name>
+    <vendor email="pino.silvaggio@gmail.com" url="https://github.com/bitstrings/maven-plus">bitstrings.org</vendor>
+
+    <description><![CDATA[
+      <p>
+        <b>Everything you expect from a Maven plugin, plus the answers none of them give you.</b>
+        Run and debug any goal, run your tests the way Maven runs them, win any dependency argument. Then find
+        out why the build is slow, where a version really came from, and what is rotting in your local
+        repository.
+      </p>
+
+      <ul>
+        <li><b>Goals</b> you save once, each one a real IDE action with its own shortcut.</li>
+        <li><b>Tests</b> run and debugged through Maven, reported in the IDE test tree.</li>
+        <li><b>Dependency Analyzer</b> on the tree the IDE already resolved: conflicts, every path, and why.</li>
+        <li><b>Effective values inline</b>: every <code>${property}</code> and inherited version, in the POM.</li>
+        <li><b>Profiler</b>: the critical path of a parallel build, and whether raising <code>-T</code> helps.</li>
+        <li><b>Model</b>: every version, plugin and property beside the POM that really set it.</li>
+        <li><b>Repository</b>: what is missing, half-downloaded or negatively cached in <code>~/.m2</code>.</li>
+        <li><b>Build context</b> shared with your team, with your own machine always winning.</li>
+        <li><b>Maven Daemon</b> found or installed for you, and options rendered for Maven 3, 4 or mvnd.</li>
+      </ul>
+
+      <h3>Run and debug any goal, on the module you are already in</h3>
+      <p>
+        One popup, from the editor or the project tree, already pointed at the right module. Save the goals you
+        keep retyping: each one becomes a real IDE action, so it gets its own keyboard shortcut and its own
+        toolbar button. A saved goal carries its own profiles, properties, options, JRE and Maven version, so
+        the fast build and the thorough one live side by side.
+      </p>
+      <ul>
+        <li>Run icons in the gutter of <code>pom.xml</code>: the whole module, one plugin, one execution.</li>
+        <li>Run a goal before any run configuration launches, as a before-launch step.</li>
+        <li>Force Clean, skip tests and offline are toggles, not edits to the goals you saved.</li>
+        <li>Colored Maven output. Maven gives up on color inside an IDE; Maven Prime asks for it anyway.</li>
+      </ul>
+
+      <h3>Run and debug your tests through Maven</h3>
+      <p>
+        Run one test method or one test class the way Maven will run it in CI, and read the result in the IDE
+        test tree instead of scrolling console output. Debug attaches to the JVMs that Surefire forks, so a
+        breakpoint inside the test is actually hit.
+      </p>
+
+      <h3>Win the dependency argument</h3>
+      <p>
+        The analyzer opens on the <code>pom.xml</code> you are reading, in the editor, on the tree the IDE has
+        already resolved, so there is nothing to wait for. It shows which versions clashed, which one won, and
+        every path that drags an artifact in.
+      </p>
+      <ul>
+        <li>
+          Every path also says <b>why</b> it was kept or dropped: omitted for conflict, managed by dependency
+          management, duplicate, excluded. Seeing the paths is not the same as knowing the reason.
+        </li>
+        <li>
+          Exclude the one you do not want and Maven Prime writes it into the declaration that actually causes it.
+          When that declaration is inherited, it tells you where, instead of quietly changing every module
+          that inherits it.
+        </li>
+        <li>Jump from any artifact straight into your local repository, and back again.</li>
+        <li>Sort by size on disk, when you need to know what made the build heavy.</li>
+      </ul>
+
+      <p>
+        <b>That is the part you already expect. Here is the rest.</b>
+      </p>
+
+      <h3>Know why the build is slow</h3>
+      <p>
+        Per-module times tell you nothing about a parallel build. Maven Prime measures the build from the inside,
+        lays it out as a timeline with one lane per module that really ran at the same time, and gives you the
+        one answer you actually wanted: raise <code>-T</code> to this and save that much, or stop trying,
+        because these modules are the critical path.
+      </p>
+
+      <h3>Every <code>${property}</code> resolved, in the POM you are reading</h3>
+      <p>
+        A placeholder shows what the effective model actually resolved it to, right beside it, and not only
+        inside a version tag. A dependency or plugin with no version shows the one it inherits from dependency
+        or plugin management. Click a value and the file that decided it opens on the line, parent POMs
+        included. No build to run, no tab to open, no guessing which ancestor won.
+      </p>
+
+      <h3>Know where a version came from</h3>
+      <p>
+        Every dependency, every plugin and every property, beside the POM that really set it. Parents
+        included, even the ones that exist only in your local repository. One double-click and you are looking
+        at the line.
+      </p>
+
+      <h3>One build context, honored everywhere</h3>
+      <p>
+        Profiles, properties and the Maven environment in one place, applied to every run. Flip a profile and
+        the effective model reloads itself, so what the IDE resolves is what your next build will really do.
+      </p>
+      <p>
+        Keep that context in the repository and the whole team has it on the next pull. Your own changes always
+        win, so a shared setup never fights your machine, and nothing from a repository applies until you trust
+        it.
+      </p>
+
+      <h3>A local repository you can trust</h3>
+      <p>
+        Artifacts that were never downloaded, that answered 404 everywhere, or that died halfway. Which
+        repositories were tried, and when. Sources and javadoc that are not really there. And when Maven has
+        cached a failure and refuses to retry, clear it for that one artifact instead of deleting your local
+        repository and downloading the internet again.
+      </p>
+      <ul>
+        <li>Any artifact in your local repository, straight from <b>Search Everywhere</b>.</li>
+        <li>Newer published versions show up on their own: no button, no request, no waiting.</li>
+        <li>Credentials for the repository that refused you, kept in the IDE password safe.</li>
+      </ul>
+
+      <h3>Builds that start instantly</h3>
+      <p>
+        The Maven Daemon keeps the JVM warm between builds. Maven Prime finds the one you have or installs one for
+        you, keeps the daemons in check, and never sends an option the Maven you picked cannot run: it drops it
+        and tells you which one.
+      </p>
+
+      <h3>And the small things you keep wishing for</h3>
+      <ul>
+        <li><b>Add as Dependency</b> writes the element into the module POM for you.</li>
+        <li>Any dependency copied as ready-to-paste XML, or as plain coordinates.</li>
+        <li>Intentions on the POM: analyze an artifact, go to the version that decided it, exclude it.</li>
+        <li>Options rendered for the Maven that will really run it, whether that is Maven 3, Maven 4 or mvnd.</li>
+        <li>The recent builds are kept, not only the last one, so the run that failed differently is one pick
+          away instead of another rerun.</li>
+        <li>The goals you save and the whole build context travel in one file at the root of the repository.</li>
+      </ul>
+
+      <p>
+        Free, and open source under Apache 2.0.
+      </p>
+    ]]></description>
+
+    <change-notes><![CDATA[
+      <b>1.0.0</b>
+      <ul>
+        <li>Initial release.</li>
+      </ul>
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.java</depends>
+    <depends>org.jetbrains.idea.maven</depends>
+    <depends optional="true" config-file="mavenprime-json.xml">com.intellij.modules.json</depends>
+
+    <resource-bundle>messages.MavenPrimeBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <themeMetadataProvider path="/META-INF/MavenPrime.themeMetadata.json"/>
+        <iconMapper mappingFile="MavenPrimeIconMappings.json"/>
+        <configurationType implementation="org.bitstrings.idea.plugins.mavenprime.run.MavenPrimeRunConfigurationType"/>
+        <notificationGroup
+            id="MavenPrime"
+            displayType="BALLOON"
+            bundle="messages.MavenPrimeBundle"
+            key="mavenprime.name"/>
+        <toolWindow
+            id="Maven Prime"
+            anchor="right"
+            icon="/icons/mavenPrimeToolWindow.svg"
+            factoryClass="org.bitstrings.idea.plugins.mavenprime.toolwindow.MavenPrimeToolWindowFactory"/>
+        <fileEditorProvider
+            implementation="org.bitstrings.idea.plugins.mavenprime.dependencies.DependencyAnalyzerEditorProvider"/>
+        <projectConfigurable
+            groupId="build.tools"
+            id="mavenprime.settings"
+            bundle="messages.MavenPrimeBundle"
+            key="mavenprime.name"
+            instance="org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeConfigurable"/>
+        <projectConfigurable
+            parentId="mavenprime.settings"
+            id="mavenprime.settings.daemons"
+            bundle="messages.MavenPrimeBundle"
+            key="mavenprime.settings.daemons"
+            instance="org.bitstrings.idea.plugins.mavenprime.settings.DaemonsConfigurable"/>
+        <projectConfigurable
+            parentId="mavenprime.settings"
+            id="mavenprime.settings.repository"
+            bundle="messages.MavenPrimeBundle"
+            key="mavenprime.settings.repository"
+            instance="org.bitstrings.idea.plugins.mavenprime.settings.RepositoryConfigurable"/>
+        <stepsBeforeRunProvider
+            implementation="org.bitstrings.idea.plugins.mavenprime.run.MavenPrimeBeforeRunTaskProvider"/>
+        <codeInsight.declarativeInlayProvider
+            language="XML"
+            implementationClass="org.bitstrings.idea.plugins.mavenprime.editor.PomEffectiveModelHints"
+            isEnabledByDefault="true"
+            group="VALUES_GROUP"
+            providerId="mavenprime.effectiveModel"
+            bundle="messages.MavenPrimeBundle"
+            nameKey="mavenprime.inlay.effectiveModel.name"
+            descriptionKey="mavenprime.inlay.effectiveModel.description">
+            <option
+                optionId="mavenprime.effectiveModel.propertyValues"
+                bundle="messages.MavenPrimeBundle"
+                nameKey="mavenprime.inlay.effectiveModel.propertyValues"
+                enabledByDefault="true"/>
+            <option
+                optionId="mavenprime.effectiveModel.otherValues"
+                bundle="messages.MavenPrimeBundle"
+                nameKey="mavenprime.inlay.effectiveModel.otherValues"
+                enabledByDefault="true"/>
+            <option
+                optionId="mavenprime.effectiveModel.managedVersions"
+                bundle="messages.MavenPrimeBundle"
+                nameKey="mavenprime.inlay.effectiveModel.managedVersions"
+                enabledByDefault="true"/>
+        </codeInsight.declarativeInlayProvider>
+        <codeInsight.inlayActionHandler
+            handlerId="mavenprime.modelOrigin"
+            implementationClass="org.bitstrings.idea.plugins.mavenprime.editor.ModelOriginNavigator"/>
+        <searchEverywhereContributor
+            implementation="org.bitstrings.idea.plugins.mavenprime.repository.ArtifactSearchContributorFactory"/>
+        <postStartupActivity
+            implementation="org.bitstrings.idea.plugins.mavenprime.MavenPrimeStartupActivity"/>
+        <runConfigurationProducer
+            implementation="org.bitstrings.idea.plugins.mavenprime.run.MavenPrimeConfigurationProducer"/>
+        <runConfigurationProducer
+            implementation="org.bitstrings.idea.plugins.mavenprime.run.MavenPrimeTestConfigurationProducer"/>
+        <programRunner
+            id="MavenPrimeTestDebug"
+            implementation="org.bitstrings.idea.plugins.mavenprime.run.MavenPrimeTestDebugRunner"/>
+        <runLineMarkerContributor
+            language="XML"
+            implementationClass="org.bitstrings.idea.plugins.mavenprime.editor.PomRunLineMarkerContributor"/>
+        <intentionAction>
+            <language>XML</language>
+            <category>Maven Prime</category>
+            <className>org.bitstrings.idea.plugins.mavenprime.editor.AnalyzeDependencyIntention</className>
+        </intentionAction>
+        <intentionAction>
+            <language>XML</language>
+            <category>Maven Prime</category>
+            <className>org.bitstrings.idea.plugins.mavenprime.editor.GoToVersionDeclarationIntention</className>
+        </intentionAction>
+        <intentionAction>
+            <language>XML</language>
+            <category>Maven Prime</category>
+            <className>org.bitstrings.idea.plugins.mavenprime.editor.ExcludeTransitiveIntention</className>
+        </intentionAction>
+    </extensions>
+
+
+    <actions>
+        <group
+            id="MavenPrime.Group"
+            class="org.bitstrings.idea.plugins.mavenprime.actions.MavenPrimeActionGroup"
+            popup="true"
+            icon="/icons/mavenPrime.svg">
+            <action
+                id="MavenPrime.RunGoal"
+                class="org.bitstrings.idea.plugins.mavenprime.actions.RunGoalPopupAction">
+                <keyboard-shortcut keymap="$default" first-keystroke="control shift alt M"/>
+            </action>
+            <action
+                id="MavenPrime.DebugGoal"
+                class="org.bitstrings.idea.plugins.mavenprime.actions.DebugGoalPopupAction"/>
+            <action
+                id="MavenPrime.RunSelectedGoals"
+                class="org.bitstrings.idea.plugins.mavenprime.actions.RunSelectedGoalsAction$Run"
+                icon="/icons/mavenPrime.svg">
+                <add-to-group group-id="Maven.BuildMenu" anchor="first"/>
+            </action>
+            <action
+                id="MavenPrime.DebugSelectedGoals"
+                class="org.bitstrings.idea.plugins.mavenprime.actions.RunSelectedGoalsAction$Debug"
+                icon="/icons/mavenPrime.svg">
+                <add-to-group
+                    group-id="Maven.BuildMenu"
+                    anchor="after"
+                    relative-to-action="MavenPrime.RunSelectedGoals"/>
+            </action>
+            <group id="MavenPrime.Goals" popup="true" icon="/icons/mavenPrime.svg"/>
+            <group id="MavenPrime.DebugGoals" popup="true" icon="AllIcons.Actions.StartDebugger"/>
+            <separator/>
+            <action
+                id="MavenPrime.BuildProfiles"
+                class="org.bitstrings.idea.plugins.mavenprime.actions.BuildProfilesAction"
+                icon="AllIcons.Actions.Properties"/>
+            <action
+                id="MavenPrime.ForceClean"
+                class="org.bitstrings.idea.plugins.mavenprime.toolwindow.ForceCleanAction"
+                icon="AllIcons.Actions.GC"/>
+            <action
+                id="MavenPrime.AutoRefreshModel"
+                class="org.bitstrings.idea.plugins.mavenprime.toolwindow.AutoRefreshAction"
+                icon="AllIcons.Actions.BuildAutoReloadChanges"/>
+            <action
+                id="MavenPrime.ColorConsole"
+                class="org.bitstrings.idea.plugins.mavenprime.toolwindow.ColorConsoleAction"
+                icon="AllIcons.Actions.Colors"/>
+            <action
+                id="MavenPrime.UseDaemon"
+                class="org.bitstrings.idea.plugins.mavenprime.toolwindow.UseDaemonAction"
+                icon="/icons/daemon.svg"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </group>
+        <action
+            id="MavenPrime.RunTestWithMavenPrime"
+            class="org.bitstrings.idea.plugins.mavenprime.run.RunTestWithMavenPrimeAction$Run"
+            icon="AllIcons.Actions.Execute">
+            <add-to-group
+                group-id="RunContextGroupInner"
+                anchor="after"
+                relative-to-action="RunContextExecutorsGroup"/>
+            <add-to-group group-id="RunLineMarkerExtraActions" anchor="first"/>
+        </action>
+        <action
+            id="MavenPrime.DebugTestWithMavenPrime"
+            class="org.bitstrings.idea.plugins.mavenprime.run.RunTestWithMavenPrimeAction$Debug"
+            icon="AllIcons.Actions.StartDebugger">
+            <add-to-group
+                group-id="RunContextGroupInner"
+                anchor="after"
+                relative-to-action="MavenPrime.RunTestWithMavenPrime"/>
+            <add-to-group
+                group-id="RunLineMarkerExtraActions"
+                anchor="after"
+                relative-to-action="MavenPrime.RunTestWithMavenPrime"/>
+        </action>
+        <action
+            id="MavenPrime.ShowSettings"
+            class="org.bitstrings.idea.plugins.mavenprime.actions.ShowSettingsAction"
+            icon="/icons/mavenPrime.svg">
+            <add-to-group
+                group-id="Maven.ShowSettingsGroup"
+                anchor="after"
+                relative-to-action="Maven.ShowSettings"/>
+        </action>
+    </actions>
+
+</idea-plugin>

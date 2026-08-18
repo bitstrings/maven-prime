@@ -1,0 +1,9 @@
+{
+  "icons": {
+    "expui": {
+      "toolwindows": {
+        "mavenPrimeToolWindow.svg": "icons/mavenPrimeToolWindow.svg"
+      }
+    }
+  }
+}

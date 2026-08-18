@@ -1,0 +1,27 @@
+[versions]
+intellijPlatform = "2024.3"
+pluginSinceBuild = "243"
+
+# Unified IDEA, not Community, which stopped being published separately after 2025.3.
+intellijPlatformNewest = "2026.2"
+
+javaToolchain = "21"
+
+# Pinned low deliberately: EventSpy is unchanged since 3.0.2, so a spy built here loads on 3.6 through 4.x.
+mavenCore = "3.6.3"
+
+junit = "4.13.2"
+errorProneAnnotations = "2.28.0"
+
+# Bundled on purpose; the IDE's own copy is internal and moves between releases.
+commonsLang3 = "3.20.0"
+
+# Bundled on purpose; the IDE has no gson the plugin classloader can see.
+gson = "2.11.0"
+
+[libraries]
+mavenCore = { module = "org.apache.maven:maven-core", version.ref = "mavenCore" }
+junit = { module = "junit:junit", version.ref = "junit" }
+commonsLang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang3" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+errorProneAnnotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "errorProneAnnotations" }

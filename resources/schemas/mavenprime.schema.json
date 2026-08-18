@@ -1,0 +1,234 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Maven Prime project configuration",
+  "description": "Project-level Maven Prime configuration, checked into version control at the reactor root.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Schema version of this file.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "defaults": {
+      "description": "Team values for the global build context. Every developer inherits these unless they change the value locally; Reset to Defaults drops the local changes.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profiles": {
+          "description": "Profile id to enabled state, applied to every build and to the IDE Maven import. false renders as !profile. A developer who sets the profile locally keeps their own state.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "properties": {
+          "description": "User properties applied to every build and, unless excluded per property, to the IDE Maven import. An empty value renders as -Dkey, which Maven reads as true; use options for a literal -Dkey=.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "environment": {
+          "$ref": "#/definitions/environment"
+        },
+        "forceClean": {
+          "description": "Put the clean phase in front of every build that runs a lifecycle phase.",
+          "type": "boolean"
+        }
+      }
+    },
+    "goals": {
+      "description": "Project-scoped goals, shared with everyone who checks out this repository.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/goal"
+      }
+    }
+  },
+  "definitions": {
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request"
+      ],
+      "properties": {
+        "id": {
+          "description": "Stable identifier. Generated when omitted.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Label shown in the Goals tab. The goal line is used when omitted.",
+          "type": "string"
+        },
+        "request": {
+          "$ref": "#/definitions/request"
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "goals": {
+          "description": "Lifecycle phases and plugin goals, in execution order. Replaces the goals already set.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            [
+              "clean",
+              "install"
+            ]
+          ]
+        },
+        "settingsFile": {
+          "description": "Maven user settings file (-s). Blank uses the IDE Maven settings.",
+          "type": "string"
+        },
+        "pomFileName": {
+          "description": "POM file name (-f) when it is not pom.xml.",
+          "type": "string",
+          "default": "pom.xml"
+        },
+        "distribution": {
+          "$ref": "#/definitions/distribution"
+        },
+        "profiles": {
+          "description": "Profile id to enabled state, merged over the profiles already set. false renders as !profile, null removes the profile.",
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "properties": {
+          "description": "User properties rendered as -Dkey=value, merged over the properties already set. An empty value renders as -Dkey, which Maven reads as true; null removes the property.",
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "flags": {
+          "description": "Maven Prime option toggles, added to the toggles already set.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "OFFLINE",
+              "UPDATE_SNAPSHOTS",
+              "NO_SNAPSHOT_UPDATES",
+              "NON_RECURSIVE",
+              "ALSO_MAKE",
+              "ALSO_MAKE_DEPENDENTS",
+              "SKIP_TESTS",
+              "SHOW_ERRORS",
+              "BATCH_MODE",
+              "NO_TRANSFER_PROGRESS",
+              "STRICT_CHECKSUMS",
+              "LAX_CHECKSUMS",
+              "IGNORE_TRANSITIVE_REPOSITORIES",
+              "RESUME",
+              "NO_DAEMON"
+            ]
+          }
+        },
+        "failureBehavior": {
+          "description": "Reactor failure behavior.",
+          "type": "string",
+          "enum": [
+            "DEFAULT",
+            "FAIL_FAST",
+            "FAIL_AT_END",
+            "FAIL_NEVER"
+          ]
+        },
+        "outputLevel": {
+          "description": "Maven output verbosity.",
+          "type": "string",
+          "enum": [
+            "DEFAULT",
+            "QUIET",
+            "DEBUG"
+          ]
+        },
+        "threads": {
+          "description": "Thread count (-T), for instance 4 or 1C.",
+          "type": "string"
+        },
+        "projects": {
+          "description": "Module selectors (-pl). Replaces the selectors already set.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "description": "Extra command line options, parsed like a shell argument list.",
+          "type": "string"
+        },
+        "jre": {
+          "description": "JRE name, or one of the IDE placeholders such as #JAVA_HOME.",
+          "type": "string"
+        },
+        "vmOptions": {
+          "description": "JVM options for the Maven process.",
+          "type": "string"
+        }
+      }
+    },
+    "environment": {
+      "description": "Maven installation and JVM the build context runs with. A run inherits every field it does not set itself.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "distribution": {
+          "$ref": "#/definitions/distribution"
+        },
+        "settingsFile": {
+          "description": "Maven user settings file (-s). Blank uses the IDE Maven settings.",
+          "type": "string"
+        },
+        "jre": {
+          "description": "JRE name, or one of the IDE placeholders such as #JAVA_HOME.",
+          "type": "string"
+        },
+        "vmOptions": {
+          "description": "JVM options for the Maven process.",
+          "type": "string"
+        }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "description": "CONTEXT follows the build context's Maven, which is what an unset distribution means. IDE follows the IDE Maven settings, including the Maven wrapper.",
+          "type": "string",
+          "enum": [
+            "CONTEXT",
+            "IDE",
+            "MAVEN_HOME",
+            "MVND_HOME"
+          ]
+        },
+        "path": {
+          "description": "Installation directory. Required for MAVEN_HOME and MVND_HOME.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

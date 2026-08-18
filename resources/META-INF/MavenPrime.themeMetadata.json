@@ -1,0 +1,50 @@
+{
+  "name": "Maven Prime",
+  "fixed": false,
+  "ui": [
+    {
+      "key": "MavenPrime.Scope.test",
+      "description": "Dependency label color for the test scope"
+    },
+    {
+      "key": "MavenPrime.Scope.provided",
+      "description": "Dependency label color for the provided scope"
+    },
+    {
+      "key": "MavenPrime.Scope.runtime",
+      "description": "Dependency label color for the runtime scope"
+    },
+    {
+      "key": "MavenPrime.Scope.system",
+      "description": "Dependency label color for the system scope"
+    },
+    {
+      "key": "MavenPrime.Paths.winner",
+      "description": "The dependency version that resolution picked"
+    },
+    {
+      "key": "MavenPrime.Marker.duplicate",
+      "description": "Marker for a dependency omitted as a duplicate"
+    },
+    {
+      "key": "MavenPrime.Marker.excluded",
+      "description": "Marker for an excluded dependency"
+    },
+    {
+      "key": "MavenPrime.Marker.cycle",
+      "description": "Marker for a dependency cycle"
+    },
+    {
+      "key": "MavenPrime.Timeline.bar",
+      "description": "Profiler timeline bar for a module off the critical path"
+    },
+    {
+      "key": "MavenPrime.Timeline.criticalBar",
+      "description": "Profiler timeline bar for a module on the critical path"
+    },
+    {
+      "key": "MavenPrime.Context.importForeground",
+      "description": "Build context marker for a property passed to the IDE Maven import"
+    }
+  ]
+}

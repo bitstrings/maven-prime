@@ -1,0 +1,6 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="JavaScript.JsonSchema">
+        <ProviderFactory
+            implementation="org.bitstrings.idea.plugins.mavenprime.config.MavenPrimeSchemaProviderFactory"/>
+    </extensions>
+</idea-plugin>
