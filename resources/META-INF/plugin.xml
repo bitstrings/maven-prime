@@ -139,6 +139,32 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.1.0</b>
+      <ul>
+        <li>
+          <b>Profiler</b>: every bar carries the duration of the module it stands for, and clicking a bar
+          selects that module in the details below. Bars too short to aim at are easier to hit.
+        </li>
+        <li><b>Goals</b>: clone a saved goal instead of retyping it.</li>
+        <li>
+          <code>.mavenprime.json</code> is never written on your behalf. Create it when you want to share
+          the goals and build context you have, from the Maven settings wheel or the Maven Prime settings.
+        </li>
+        <li>
+          Until that file exists, your goals and build context stay with the project under
+          <code>.idea</code>. Wherever the file is present, it is the one that counts.
+        </li>
+        <li>
+          A <code>.mavenprime.json</code> written by a newer Maven Prime is read as far as this one can
+          read it, and is never written over.
+        </li>
+        <li>
+          <b>Daemons</b>: Remove deletes the daemon Maven Prime downloaded rather than letting it return on
+          the next scan. A daemon you installed yourself is left where it is.
+        </li>
+        <li>The tool window follows the editor and the project tree without holding the UI thread.</li>
+      </ul>
+
       <b>1.0.0</b>
       <ul>
         <li>Initial release.</li>
