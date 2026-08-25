@@ -2,6 +2,7 @@ package org.bitstrings.idea.plugins.mavenprime.toolwindow;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -25,6 +27,7 @@ import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallation;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallationService;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MvndDownload;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MvndDownloadTask;
+import org.bitstrings.idea.plugins.mavenprime.distribution.MvndInstallations;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MvndLayout;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MvndPlatform;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MvndReleases;
@@ -39,6 +42,7 @@ import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.VerticalFlowLayout;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.components.JBCheckBox;
+import com.intellij.util.SystemProperties;
 import com.intellij.util.ui.JBUI;
 
 public final class DaemonsPanel
@@ -123,9 +127,10 @@ public final class DaemonsPanel
     {
         DistributionItem selected = installationCombo.getItem();
 
-        MavenInstallationService
-            .getInstance(project)
-            .detectDistributions(pendingSpecs(), null, detected -> showInstallations(detected, selected));
+        MavenInstallationService service = MavenInstallationService.getInstance(project);
+
+        service.invalidateDaemonHomes();
+        service.detectDistributions(pendingSpecs(), null, detected -> showInstallations(detected, selected));
     }
 
     private List<DistributionSpec> pendingSpecs()
@@ -176,16 +181,33 @@ public final class DaemonsPanel
         return versions.get().isEmpty() ? List.of(MvndDownload.DEFAULT_VERSION) : versions.get();
     }
 
-    private void installed(Path home)
+    private void installed(Path installed)
     {
-        if (!pendingHomes.contains(home.toString()))
-        {
-            pendingHomes.add(home.toString());
-        }
+        Path home = MvndLayout.realPath(installed);
+
+        hold(home);
 
         pendingBuildDaemon = home.toString();
 
         reloadInstallations();
+    }
+
+    private void hold(Path home)
+    {
+        if (pendingHomes.stream().noneMatch(sameHome(home)))
+        {
+            pendingHomes.add(home.toString());
+        }
+    }
+
+    private static Predicate<String> sameHome(Path home)
+    {
+        return pending -> home.equals(MvndLayout.realPath(Paths.get(pending)));
+    }
+
+    private static Path userHome()
+    {
+        return Paths.get(SystemProperties.getUserHome());
     }
 
     private void addInstallation()
@@ -199,7 +221,9 @@ public final class DaemonsPanel
             return;
         }
 
-        if (!MvndLayout.isDaemonHome(Paths.get(chosen.getPath())))
+        Path home = MvndLayout.realPath(Paths.get(chosen.getPath()));
+
+        if (!MvndLayout.isDaemonHome(home))
         {
             MavenPrimeNotifications.warning(
                 project,
@@ -208,10 +232,7 @@ public final class DaemonsPanel
             return;
         }
 
-        if (!pendingHomes.contains(chosen.getPath()))
-        {
-            pendingHomes.add(chosen.getPath());
-        }
+        hold(home);
 
         reloadInstallations();
     }
@@ -225,7 +246,11 @@ public final class DaemonsPanel
             return;
         }
 
-        if (!pendingHomes.remove(selected.path))
+        Path home = MvndLayout.realPath(Paths.get(selected.path));
+
+        boolean managed = MvndInstallations.isManaged(home, userHome());
+
+        if (!managed && pendingHomes.stream().noneMatch(sameHome(home)))
         {
             MavenPrimeNotifications.info(
                 project, MavenPrimeBundle.message("mavenprime.daemon.notRemovable", selected.path));
@@ -233,12 +258,49 @@ public final class DaemonsPanel
             return;
         }
 
-        if (selected.path.equals(pendingBuildDaemon))
+        if (managed && !uninstall(home))
+        {
+            return;
+        }
+
+        pendingHomes.removeIf(sameHome(home));
+
+        if (StringUtils.isNotBlank(pendingBuildDaemon) && sameHome(home).test(pendingBuildDaemon))
         {
             pendingBuildDaemon = null;
         }
 
         reloadInstallations();
+    }
+
+    private boolean uninstall(Path home)
+    {
+        int answer =
+            Messages.showYesNoDialog(
+                project,
+                MavenPrimeBundle.message("mavenprime.daemon.remove.confirm", home),
+                MavenPrimeBundle.message("mavenprime.daemon.remove.confirm.title"),
+                Messages.getWarningIcon());
+
+        if (answer != Messages.YES)
+        {
+            return false;
+        }
+
+        try
+        {
+            MvndInstallations.remove(home, userHome());
+
+            return true;
+        }
+        catch (IOException undeleted)
+        {
+            MavenPrimeNotifications.error(
+                project,
+                MavenPrimeBundle.message("mavenprime.daemon.remove.failed", home, undeleted.getMessage()));
+
+            return false;
+        }
     }
 
     private void showInstallations(Map<DistributionSpec, MavenInstallation> detected, DistributionItem selected)

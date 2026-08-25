@@ -1,7 +1,6 @@
 package org.bitstrings.idea.plugins.mavenprime.distribution;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
@@ -76,23 +75,11 @@ public final class MvndHomeDetector
 
             if (executable != null)
             {
-                return MvndLayout.homeOfExecutable(realPath(executable.toPath()));
+                return MvndLayout.homeOfExecutable(MvndLayout.realPath(executable.toPath()));
             }
         }
 
         return null;
-    }
-
-    private static Path realPath(Path path)
-    {
-        try
-        {
-            return path.toRealPath();
-        }
-        catch (IOException ignored)
-        {
-            return path.toAbsolutePath().normalize();
-        }
     }
 
     private static void addIfDaemonHome(Set<Path> homes, Path candidate)
@@ -102,7 +89,7 @@ public final class MvndHomeDetector
             return;
         }
 
-        Path home = realPath(candidate);
+        Path home = MvndLayout.realPath(candidate);
 
         if (MvndLayout.isDaemonDistribution(home))
         {

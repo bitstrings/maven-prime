@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import com.intellij.openapi.util.io.NioFiles;
 import com.intellij.util.text.VersionComparatorUtil;
 
 public final class MvndInstallations
@@ -21,6 +22,22 @@ public final class MvndInstallations
     public static Path rootIn(Path userHome)
     {
         return userHome.resolve(MANAGED_DIRECTORY);
+    }
+
+    public static boolean isManaged(Path home, Path userHome)
+    {
+        return MvndLayout.realPath(home).startsWith(MvndLayout.realPath(rootIn(userHome)));
+    }
+
+    public static void remove(Path home, Path userHome)
+        throws IOException
+    {
+        if (!isManaged(home, userHome))
+        {
+            throw new IllegalArgumentException("Not a Maven Prime daemon installation: " + home);
+        }
+
+        NioFiles.deleteRecursively(MvndLayout.realPath(home));
     }
 
     public static List<Path> managedIn(Path userHome)

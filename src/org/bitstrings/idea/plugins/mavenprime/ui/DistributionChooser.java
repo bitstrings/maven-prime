@@ -5,6 +5,7 @@ import static com.intellij.ui.dsl.builder.TextFieldKt.COLUMNS_SHORT;
 import java.awt.BorderLayout;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -15,6 +16,7 @@ import javax.swing.JPanel;
 
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
+import org.bitstrings.idea.plugins.mavenprime.distribution.DaemonInstallations;
 import org.bitstrings.idea.plugins.mavenprime.distribution.DistributionSpec;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallation;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallationService;
@@ -111,14 +113,28 @@ public final class DistributionChooser
 
     private List<DistributionSpec> candidates(DistributionSpec requested)
     {
+        List<DistributionSpec> candidates = new ArrayList<>();
+
         if (!withContext)
         {
-            return List.of(requested);
+            candidates.add(requested);
+        }
+        else
+        {
+            if (!requested.isContext())
+            {
+                candidates.add(requested);
+            }
+
+            candidates.add(BuildContext.getInstance(project).getDistribution());
         }
 
-        DistributionSpec context = BuildContext.getInstance(project).getDistribution();
+        for (String home : DaemonInstallations.getInstance().getHomes())
+        {
+            candidates.add(DistributionSpec.daemonHome(home));
+        }
 
-        return requested.isContext() ? List.of(context) : List.of(requested, context);
+        return candidates;
     }
 
     private void show(

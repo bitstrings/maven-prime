@@ -90,13 +90,6 @@ public final class MavenInstallationService
             detected.put(spec, resolve(spec, workingDirectory));
         }
 
-        for (String configured : DaemonInstallations.getInstance().getHomes())
-        {
-            DistributionSpec spec = DistributionSpec.daemonHome(configured);
-
-            detected.computeIfAbsent(spec, candidate -> resolve(candidate, workingDirectory));
-        }
-
         for (DistributionSpec spec : additional)
         {
             detected.computeIfAbsent(spec.copy(), candidate -> resolve(candidate, workingDirectory));
@@ -167,12 +160,17 @@ public final class MavenInstallationService
             MavenProjectsManager.getInstance(project).getGeneralSettings().getMavenHomeType().getTitle());
     }
 
+    public void invalidateDaemonHomes()
+    {
+        daemonHomes = null;
+    }
+
     public void invalidate()
     {
         cache.clear();
         ideCache.clear();
 
-        daemonHomes = null;
+        invalidateDaemonHomes();
 
         MavenDistributionsCache.getInstance(project).cleanCaches();
     }

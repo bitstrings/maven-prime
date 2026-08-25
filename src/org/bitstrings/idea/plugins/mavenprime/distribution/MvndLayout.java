@@ -31,6 +31,18 @@ public final class MvndLayout
     {
     }
 
+    public static Path realPath(Path path)
+    {
+        try
+        {
+            return path.toRealPath();
+        }
+        catch (IOException unresolvable)
+        {
+            return path.toAbsolutePath().normalize();
+        }
+    }
+
     public static boolean isDaemonHome(Path home)
     {
         return findExecutable(home) != null;

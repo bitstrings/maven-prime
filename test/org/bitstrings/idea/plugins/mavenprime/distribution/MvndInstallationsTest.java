@@ -1,6 +1,8 @@
 package org.bitstrings.idea.plugins.mavenprime.distribution;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -77,6 +79,50 @@ public class MvndInstallationsTest
     {
         assertTrue(
             MvndInstallations.rootIn(userHome).startsWith(userHome.resolve(".m2")));
+    }
+
+    @Test
+    public void isManaged_aDaemonMavenPrimeDownloaded_isOurs()
+        throws IOException
+    {
+        assertTrue(MvndInstallations.isManaged(install("1.0.3"), userHome));
+    }
+
+    @Test
+    public void isManaged_aDaemonFoundElsewhereOnTheMachine_isNotOurs()
+        throws IOException
+    {
+        assertFalse(MvndInstallations.isManaged(elsewhere(), userHome));
+    }
+
+    @Test
+    public void remove_aDaemonMavenPrimeDownloaded_takesItsFilesOffDisk()
+        throws IOException
+    {
+        Path home = install("1.0.3");
+
+        MvndInstallations.remove(home, userHome);
+
+        assertFalse(
+            "a daemon left on disk keeps being detected, so removing it appears to do nothing",
+            Files.exists(home));
+        assertEquals(List.of(), MvndInstallations.managedIn(userHome));
+    }
+
+    @Test
+    public void remove_aDaemonMavenPrimeDidNotDownload_leavesItAlone()
+        throws IOException
+    {
+        Path home = elsewhere();
+
+        assertThrows(IllegalArgumentException.class, () -> MvndInstallations.remove(home, userHome));
+        assertTrue("deleting a directory Maven Prime did not create is never ours to do", Files.exists(home));
+    }
+
+    private Path elsewhere()
+        throws IOException
+    {
+        return Files.createDirectories(userHome.resolve("opt").resolve("mvnd"));
     }
 
     private Path install(String version)
