@@ -16,8 +16,11 @@ import com.intellij.ide.DataManager;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.concurrency.AppExecutorUtil;
 
 public final class ContextFollower
     implements Disposable
@@ -69,17 +72,27 @@ public final class ContextFollower
             return;
         }
 
-        DataContext data = DataManager.getInstance().getDataContext(source);
-
-        if (!project.equals(CommonDataKeys.PROJECT.getData(data)))
-        {
-            return;
-        }
-
         trackTree(source);
 
-        VirtualFile file = CommonDataKeys.VIRTUAL_FILE.getData(data);
+        DataContext data = DataManager.getInstance().getDataContext(source);
 
+        ReadAction
+            .nonBlocking(() -> fileIn(data))
+            .expireWith(this)
+            .coalesceBy(this)
+            .finishOnUiThread(ModalityState.defaultModalityState(), this::report)
+            .submit(AppExecutorUtil.getAppExecutorService());
+    }
+
+    private VirtualFile fileIn(DataContext data)
+    {
+        return project.equals(CommonDataKeys.PROJECT.getData(data))
+            ? CommonDataKeys.VIRTUAL_FILE.getData(data)
+            : null;
+    }
+
+    private void report(VirtualFile file)
+    {
         if (file != null)
         {
             onFile.accept(file);
