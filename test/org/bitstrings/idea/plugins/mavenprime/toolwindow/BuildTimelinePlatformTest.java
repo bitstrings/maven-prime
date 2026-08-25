@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -55,6 +56,28 @@ public class BuildTimelinePlatformTest
     private static final long LONG_DURATION_MILLIS = 1_000_000_000_000L;
 
     private static final int RESIZED_WIDTH = 640;
+
+    private static final String OTHER_MODULE = "org.example:app";
+
+    private static final long LONG_BUILD_MILLIS = 100_000L;
+
+    private static final int MINIMUM_HIT_WIDTH = 8;
+
+    private static final int BAR_X = 10;
+
+    private static final int WIDE_BAR = 100;
+
+    private static final int NARROW_BAR = 40;
+
+    private static final int TEXT_WIDTH = 40;
+
+    private static final int PADDING = 4;
+
+    private static final int FAR = 1000;
+
+    private static final int NEAR = 60;
+
+    private static final Font LARGE_FONT = new Font(Font.DIALOG, Font.PLAIN, 28);
 
     public void testGetZoom_aFreshTimeline_showsTheWholeBuild()
     {
@@ -184,6 +207,180 @@ public class BuildTimelinePlatformTest
         profile.accept(new ModuleTiming(MODULE, 0L, 100L));
 
         return profile;
+    }
+
+    public void testMousePressed_inTheGapBelowABar_selectsThatModuleInTheTable()
+    {
+        BuildTimeline timeline = timelineShowingAShortModule();
+        ProfileTable table = tableShowing(profileWithAShortModule());
+
+        timeline.setOnModuleChosen(table::select);
+
+        Point bar = pointOnTheBarOf(timeline, MODULE);
+
+        timeline.dispatchEvent(
+            mouseEvent(
+                timeline,
+                MouseEvent.MOUSE_PRESSED,
+                new Point(bar.x, bar.y + timeline.barHeight())));
+
+        assertEquals(
+            "a lane is taller than the bar in it, and a click in that margin reads as a miss",
+            MODULE,
+            selectedModuleOf(table));
+    }
+
+    public void testGetToolTipText_besideABarClampedToItsMinimumWidth_stillAnswersForIt()
+    {
+        BuildTimeline timeline = timelineShowingAShortModule();
+
+        int row = pointOnTheBarOf(timeline, MODULE).y;
+
+        assertTrue(
+            "a bar a couple of pixels wide cannot be hit at all unless the pointer is given some room",
+            hotWidthOf(timeline, MODULE, row) >= MINIMUM_HIT_WIDTH);
+    }
+
+    public void testGetToolTipText_downTheLaneOfABar_answersForItAcrossTheWholeRow()
+    {
+        BuildTimeline timeline = timelineShowingAShortModule();
+
+        Point bar = pointOnTheBarOf(timeline, MODULE);
+
+        assertTrue(
+            "the strip between two lanes belongs to the bar above it, not to nothing",
+            hotHeightOf(timeline, MODULE, bar.x) > timeline.barHeight());
+    }
+
+    public void testBarHeight_aTimelineGivenALargerFont_staysTheSame()
+    {
+        BuildTimeline enlarged = timelineShowingOneModule();
+
+        enlarged.setFont(LARGE_FONT);
+
+        assertEquals(
+            "a bar height measured off the UI font is a different height on every theme and DPI",
+            timelineShowingOneModule().barHeight(),
+            enlarged.barHeight());
+    }
+
+    public void testGetPreferredSize_aTimelineGivenALargerFont_keepsItsLaneGeometry()
+    {
+        BuildTimeline enlarged = timelineShowingOneModule();
+
+        enlarged.setFont(LARGE_FONT);
+
+        assertEquals(
+            "lanes that follow the UI font put every bar somewhere else when the font changes",
+            timelineShowingOneModule().getPreferredSize().height,
+            enlarged.getPreferredSize().height);
+    }
+
+    public void testDurationLabelX_aBarWiderThanItsDuration_putsTheTextInsideIt()
+    {
+        assertEquals(
+            BAR_X + PADDING,
+            BuildTimeline.durationLabelX(new Rectangle(BAR_X, 0, WIDE_BAR, 20), TEXT_WIDTH, PADDING, FAR));
+    }
+
+    public void testDurationLabelX_aBarNarrowerThanItsDuration_putsTheTextAfterIt()
+    {
+        assertEquals(
+            "a duration that does not fit its bar still belongs beside it while there is room",
+            BAR_X + NARROW_BAR + PADDING,
+            BuildTimeline.durationLabelX(new Rectangle(BAR_X, 0, NARROW_BAR, 20), TEXT_WIDTH, PADDING, FAR));
+    }
+
+    public void testDurationLabelX_aNeighbourLeavingNoRoomAfterTheBar_dropsTheText()
+    {
+        assertEquals(
+            "a duration printed over the next module's bar is worse than no duration at all",
+            BuildTimeline.NO_LABEL,
+            BuildTimeline.durationLabelX(new Rectangle(BAR_X, 0, NARROW_BAR, 20), TEXT_WIDTH, PADDING, NEAR));
+    }
+
+    private static BuildTimeline timelineShowingAShortModule()
+    {
+        BuildTimeline timeline = new BuildTimeline();
+
+        timeline.setProfile(profileWithAShortModule(), Set.of());
+        timeline.setSize(WIDTH, HEIGHT);
+
+        return timeline;
+    }
+
+    private static BuildProfile profileWithAShortModule()
+    {
+        BuildProfile profile = new BuildProfile();
+
+        profile.accept(new ModuleTiming(MODULE, 0L, 1L));
+        profile.accept(new ModuleTiming(OTHER_MODULE, 0L, LONG_BUILD_MILLIS));
+
+        return profile;
+    }
+
+    private static ProfileTable tableShowing(BuildProfile profile)
+    {
+        ProfileTable table = new ProfileTable();
+
+        table.setProfile(profile, profile.summarize());
+
+        return table;
+    }
+
+    private static Point pointOnTheBarOf(BuildTimeline timeline, String module)
+    {
+        for (int y = 0; y < HEIGHT; y++)
+        {
+            for (int x = 0; x < WIDTH; x++)
+            {
+                Point point = new Point(x, y);
+
+                if (namesModule(timeline, point, module))
+                {
+                    return point;
+                }
+            }
+        }
+
+        throw new AssertionError("the fixture painted no bar for " + module);
+    }
+
+    private static int hotWidthOf(BuildTimeline timeline, String module, int y)
+    {
+        int hot = 0;
+
+        for (int x = 0; x < WIDTH; x++)
+        {
+            if (namesModule(timeline, new Point(x, y), module))
+            {
+                hot++;
+            }
+        }
+
+        return hot;
+    }
+
+    private static int hotHeightOf(BuildTimeline timeline, String module, int x)
+    {
+        int hot = 0;
+
+        for (int y = 0; y < HEIGHT; y++)
+        {
+            if (namesModule(timeline, new Point(x, y), module))
+            {
+                hot++;
+            }
+        }
+
+        return hot;
+    }
+
+    private static boolean namesModule(BuildTimeline timeline, Point point, String module)
+    {
+        String tooltip = timeline.getToolTipText(mouseEvent(timeline, MouseEvent.MOUSE_MOVED, point));
+
+        return (tooltip != null) && tooltip.contains(module);
     }
 
     private static String selectedModuleOf(ProfileTable table)
@@ -409,6 +606,19 @@ public class BuildTimelinePlatformTest
             "a module column left at the JTable default clips every name in it: " + shortName + " vs "
                 + table.getColumnModel().getColumn(MODULE_COLUMN).getPreferredWidth(),
             table.getColumnModel().getColumn(MODULE_COLUMN).getPreferredWidth() > shortName);
+    }
+
+    public void testSelect_aModuleRow_leavesThatRowSelectedInTheTable()
+    {
+        ProfileTable table = tableShowingOneModule();
+
+        table.select(MODULE);
+
+        assertEquals(
+            "a selection set on the inner tree alone never reaches the table, so the row the user "
+                + "clicked a bar for is never painted as selected",
+            0,
+            table.getSelectedRow());
     }
 
     public void testSelect_aModuleRow_reportsThatModuleToTheTimeline()

@@ -1,7 +1,6 @@
 package org.bitstrings.idea.plugins.mavenprime.toolwindow;
 
 import java.awt.BasicStroke;
-import java.awt.Color;
 import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -16,10 +15,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 
 import javax.swing.JComponent;
@@ -46,15 +47,27 @@ public final class BuildTimeline
 
     public static final double FIT = 1.0D;
 
+    static final int NO_LABEL = -1;
+
     private static final double ZOOM_STEP = 1.25D;
 
     private static final double MAX_ZOOM = 64.0D;
 
     private static final int MINIMUM_WIDTH = 320;
 
-    private static final int LANE_HEIGHT = 22;
+    private static final int RULER_HEIGHT = 20;
 
-    private static final int BAR_HEIGHT = 16;
+    private static final int BAR_HEIGHT = 20;
+
+    private static final int LANE_HEIGHT = 28;
+
+    private static final int BAR_GAP = 1;
+
+    private static final int BOTTOM_MARGIN = 8;
+
+    private static final int BORDER_STROKE = 1;
+
+    private static final int LABEL_PADDING = 4;
 
     private static final int LEFT_GUTTER = 8;
 
@@ -62,16 +75,34 @@ public final class BuildTimeline
 
     private static final int MINIMUM_BAR_WIDTH = 2;
 
+    private static final int HIT_SLOP = 4;
+
     private static final int POINTED_STROKE = 1;
 
     private static final int SELECTED_STROKE = 2;
 
     private static final int TICK_COUNT = 6;
 
+    private static final int NO_LANE = -1;
+
+    private static final long NO_NEIGHBOUR = -1L;
+
     private static final JBColor BAR = JBColor.namedColor("MavenPrime.Timeline.bar", 0x6FA8DC, 0x3C6E9E);
 
     private static final JBColor CRITICAL_BAR =
         JBColor.namedColor("MavenPrime.Timeline.criticalBar", 0xE8A33D, 0xB57923);
+
+    private static final JBColor BAR_BORDER =
+        JBColor.namedColor("MavenPrime.Timeline.barBorder", 0x4C86B6, 0x27516F);
+
+    private static final JBColor CRITICAL_BAR_BORDER =
+        JBColor.namedColor("MavenPrime.Timeline.criticalBarBorder", 0xC4832B, 0x8C5C18);
+
+    private static final JBColor BAR_TEXT =
+        JBColor.namedColor("MavenPrime.Timeline.barText", 0x1F2E3D, 0xE8F0F7);
+
+    private static final JBColor CRITICAL_BAR_TEXT =
+        JBColor.namedColor("MavenPrime.Timeline.criticalBarText", 0x3A2705, 0xFFF3E0);
 
     private final transient List<Span> spans = new ArrayList<>();
 
@@ -191,19 +222,63 @@ public final class BuildTimeline
         return (span == null) ? null : span.module().module();
     }
 
+    // A bar clamped to its minimum width is a few pixels wide, so the whole lane row answers for it.
     private Span spanAt(Point point)
     {
+        int lane = laneAt(point.y);
+
+        if (lane < 0)
+        {
+            return null;
+        }
+
         int rulerHeight = rulerHeight();
+        int slop = JBUI.scale(HIT_SLOP);
+
+        Span nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
 
         for (Span span : spans)
         {
-            if (boundsOf(span, rulerHeight).contains(point))
+            if (span.lane() != lane)
             {
-                return span;
+                continue;
+            }
+
+            int distance = distanceTo(boundsOf(span, rulerHeight), point.x);
+
+            if ((distance <= slop) && (distance < nearestDistance))
+            {
+                nearest = span;
+                nearestDistance = distance;
             }
         }
 
-        return null;
+        return nearest;
+    }
+
+    private int laneAt(int y)
+    {
+        int rulerHeight = rulerHeight();
+
+        if (y < rulerHeight)
+        {
+            return NO_LANE;
+        }
+
+        int lane = (y - rulerHeight) / laneHeight();
+
+        return (lane < laneCount) ? lane : NO_LANE;
+    }
+
+    private static int distanceTo(Rectangle bounds, int x)
+    {
+        if (x < bounds.x)
+        {
+            return bounds.x - x;
+        }
+
+        return (x > (bounds.x + bounds.width)) ? (x - bounds.x - bounds.width) : 0;
     }
 
     public double getZoom()
@@ -266,19 +341,42 @@ public final class BuildTimeline
         laneCount = Math.max(1, lanes.values().stream().mapToInt(Integer::intValue).max().orElse(0) + 1);
         wallClockMillis = 0L;
 
+        Map<Integer, List<ModuleTiming>> byLane = new TreeMap<>();
+
         for (ModuleTiming module : profile.getModules())
         {
             wallClockMillis = Math.max(wallClockMillis, module.endMillis());
 
-            spans.add(
-                new Span(
-                    module,
-                    lanes.getOrDefault(module.module(), Integer.valueOf(0)).intValue(),
-                    criticalPath.contains(module.module())));
+            byLane
+                .computeIfAbsent(
+                    lanes.getOrDefault(module.module(), Integer.valueOf(0)), lane -> new ArrayList<>())
+                .add(module);
+        }
+
+        for (Map.Entry<Integer, List<ModuleTiming>> lane : byLane.entrySet())
+        {
+            addLane(lane.getKey().intValue(), lane.getValue(), criticalPath);
         }
 
         revalidate();
         repaint();
+    }
+
+    private void addLane(int lane, List<ModuleTiming> modules, Set<String> criticalPath)
+    {
+        modules.sort(Comparator.comparingLong(ModuleTiming::startMillis));
+
+        for (int index = 0; index < modules.size(); index++)
+        {
+            ModuleTiming module = modules.get(index);
+
+            spans.add(
+                new Span(
+                    module,
+                    lane,
+                    criticalPath.contains(module.module()),
+                    ((index + 1) < modules.size()) ? modules.get(index + 1).startMillis() : NO_NEIGHBOUR));
+        }
     }
 
     @Override
@@ -286,7 +384,7 @@ public final class BuildTimeline
     {
         return new Dimension(
             (int) (viewportWidth() * zoom),
-            rulerHeight() + JBUI.scale((laneCount * LANE_HEIGHT) + LEFT_GUTTER));
+            rulerHeight() + (laneCount * laneHeight()) + JBUI.scale(BOTTOM_MARGIN));
     }
 
     private int viewportWidth()
@@ -307,7 +405,7 @@ public final class BuildTimeline
     @Override
     public int getScrollableUnitIncrement(Rectangle visible, int orientation, int direction)
     {
-        return JBUI.scale(LANE_HEIGHT);
+        return laneHeight();
     }
 
     @Override
@@ -343,21 +441,35 @@ public final class BuildTimeline
 
             int rulerHeight = rulerHeight();
 
+            canvas.setFont(smallFont());
+
+            FontMetrics metrics = canvas.getFontMetrics();
+
             for (Span span : spans)
             {
                 Rectangle bounds = boundsOf(span, rulerHeight);
 
-                canvas.setColor(span.critical() ? CRITICAL_BAR : BAR);
-                canvas.fillRoundRect(
-                    bounds.x, bounds.y, bounds.width, bounds.height, JBUI.scale(ARC), JBUI.scale(ARC));
-
+                paintBar(canvas, span, bounds);
                 paintOutline(canvas, span.module().module(), bounds);
+                paintDuration(canvas, span, bounds, metrics);
             }
         }
         finally
         {
             canvas.dispose();
         }
+    }
+
+    private void paintBar(Graphics2D canvas, Span span, Rectangle bounds)
+    {
+        int arc = JBUI.scale(ARC);
+
+        canvas.setColor(span.critical() ? CRITICAL_BAR : BAR);
+        canvas.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, arc, arc);
+
+        canvas.setColor(span.critical() ? CRITICAL_BAR_BORDER : BAR_BORDER);
+        canvas.setStroke(new BasicStroke(JBUI.scale(BORDER_STROKE)));
+        canvas.drawRoundRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1, arc, arc);
     }
 
     private void paintOutline(Graphics2D canvas, String module, Rectangle bounds)
@@ -375,46 +487,120 @@ public final class BuildTimeline
             bounds.x, bounds.y, bounds.width, bounds.height, JBUI.scale(ARC), JBUI.scale(ARC));
     }
 
+    private void paintDuration(Graphics2D canvas, Span span, Rectangle bounds, FontMetrics metrics)
+    {
+        if (metrics.getHeight() > bounds.height)
+        {
+            return;
+        }
+
+        String text = Formats.formatDuration(span.module().durationMillis());
+        int textWidth = metrics.stringWidth(text);
+        int x = durationLabelX(bounds, textWidth, JBUI.scale(LABEL_PADDING), roomAfter(span));
+
+        if (x == NO_LABEL)
+        {
+            return;
+        }
+
+        canvas.setColor(
+            (x < (bounds.x + bounds.width))
+                ? (span.critical() ? CRITICAL_BAR_TEXT : BAR_TEXT)
+                : UIUtil.getContextHelpForeground());
+        canvas.drawString(
+            text, x, bounds.y + ((bounds.height + metrics.getAscent() - metrics.getDescent()) / 2));
+    }
+
+    static int durationLabelX(Rectangle bar, int textWidth, int padding, int limit)
+    {
+        if ((textWidth + (2 * padding)) <= bar.width)
+        {
+            return bar.x + padding;
+        }
+
+        int outside = bar.x + bar.width + padding;
+
+        return ((outside + textWidth) <= limit) ? outside : NO_LABEL;
+    }
+
+    private int roomAfter(Span span)
+    {
+        int gutter = JBUI.scale(LEFT_GUTTER);
+
+        return (span.nextStartMillis() == NO_NEIGHBOUR)
+            ? (gutter + usableWidth())
+            : ((gutter + scaled(span.nextStartMillis(), usableWidth())) - JBUI.scale(LABEL_PADDING));
+    }
+
     private void paintRuler(Graphics2D canvas)
     {
-        Font rulerFont = rulerFont();
+        canvas.setFont(smallFont());
 
-        canvas.setFont(rulerFont);
-
-        FontMetrics metrics = canvas.getFontMetrics(rulerFont);
-
-        Color tickColor = JBColor.border();
-        Color labelColor = UIUtil.getContextHelpForeground();
+        FontMetrics metrics = canvas.getFontMetrics();
 
         int usable = usableWidth();
-        int baseline = metrics.getAscent();
-        int labelGap = metrics.charWidth(' ');
+        int gutter = JBUI.scale(LEFT_GUTTER);
+
+        canvas.setColor(JBColor.border());
 
         for (int tick = 0; tick <= TICK_COUNT; tick++)
         {
-            int position = JBUI.scale(LEFT_GUTTER) + ((usable * tick) / TICK_COUNT);
+            int position = gutter + ((usable * tick) / TICK_COUNT);
 
-            canvas.setColor(tickColor);
-            canvas.drawLine(position, baseline, position, getHeight());
-
-            canvas.setColor(labelColor);
-            canvas.drawString(
-                Formats.formatDuration((wallClockMillis * tick) / TICK_COUNT),
-                position + labelGap,
-                baseline);
+            canvas.drawLine(position, rulerHeight(), position, getHeight());
         }
+
+        canvas.setColor(UIUtil.getContextHelpForeground());
+        canvas.setClip(0, 0, getWidth(), rulerHeight());
+
+        int drawnTo = 0;
+
+        for (int tick = 0; tick <= TICK_COUNT; tick++)
+        {
+            String label = Formats.formatDuration((wallClockMillis * tick) / TICK_COUNT);
+
+            int width = metrics.stringWidth(label);
+            int x = tickLabelX(gutter + ((usable * tick) / TICK_COUNT), width);
+
+            if (x >= drawnTo)
+            {
+                canvas.drawString(label, x, metrics.getAscent());
+
+                drawnTo = x + width + JBUI.scale(LABEL_PADDING);
+            }
+        }
+
+        canvas.setClip(null);
     }
 
-    private Font rulerFont()
+    // The last tick sits at the right edge, so its label is hung to the left of the line instead.
+    private int tickLabelX(int position, int textWidth)
+    {
+        int gap = JBUI.scale(LABEL_PADDING);
+
+        return ((position + gap + textWidth) <= getWidth())
+            ? (position + gap)
+            : (position - gap - textWidth);
+    }
+
+    private Font smallFont()
     {
         return UIUtil.getFont(UIUtil.FontSize.SMALL, getFont());
     }
 
     private int rulerHeight()
     {
-        FontMetrics metrics = getFontMetrics(rulerFont());
+        return JBUI.scale(RULER_HEIGHT);
+    }
 
-        return metrics.getHeight() + metrics.getDescent();
+    int barHeight()
+    {
+        return JBUI.scale(BAR_HEIGHT);
+    }
+
+    private int laneHeight()
+    {
+        return JBUI.scale(LANE_HEIGHT);
     }
 
     private Rectangle boundsOf(Span span, int rulerHeight)
@@ -422,13 +608,12 @@ public final class BuildTimeline
         int usable = usableWidth();
 
         int x = JBUI.scale(LEFT_GUTTER) + scaled(span.module().startMillis(), usable);
-        int width = Math.max(JBUI.scale(MINIMUM_BAR_WIDTH), scaled(span.module().durationMillis(), usable));
+        int width =
+            Math.max(
+                JBUI.scale(MINIMUM_BAR_WIDTH),
+                scaled(span.module().durationMillis(), usable) - JBUI.scale(BAR_GAP));
 
-        return new Rectangle(
-            x,
-            rulerHeight + (span.lane() * JBUI.scale(LANE_HEIGHT)),
-            width,
-            JBUI.scale(BAR_HEIGHT));
+        return new Rectangle(x, rulerHeight + (span.lane() * laneHeight()), width, barHeight());
     }
 
     private int scaled(long millis, int usable)
@@ -454,7 +639,7 @@ public final class BuildTimeline
                 Formats.formatDuration(span.module().durationMillis()));
     }
 
-    private record Span(ModuleTiming module, int lane, boolean critical)
+    private record Span(ModuleTiming module, int lane, boolean critical, long nextStartMillis)
     {
     }
 }

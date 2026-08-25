@@ -201,15 +201,23 @@ public final class ProfileTable
         for (int row = 0; row < getTree().getRowCount(); row++)
         {
             TreePath path = getTree().getPathForRow(row);
-            Object timing = timingOf((DefaultMutableTreeNode) path.getLastPathComponent());
 
-            if ((timing instanceof ModuleTiming) && ((ModuleTiming) timing).module().equals(module))
+            if (isModuleRow(path, module))
             {
-                TreeUtil.selectPath(getTree(), path);
+                setRowSelectionInterval(row, row);
+
+                scrollRectToVisible(getCellRect(row, NAME_COLUMN, true));
 
                 return;
             }
         }
+    }
+
+    private static boolean isModuleRow(TreePath path, String module)
+    {
+        Object timing = timingOf((DefaultMutableTreeNode) path.getLastPathComponent());
+
+        return (timing instanceof ModuleTiming) && ((ModuleTiming) timing).module().equals(module);
     }
 
     private String selectedModule()
