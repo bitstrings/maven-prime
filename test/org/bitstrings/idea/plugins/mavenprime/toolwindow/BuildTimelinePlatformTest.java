@@ -1,5 +1,6 @@
 package org.bitstrings.idea.plugins.mavenprime.toolwindow;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -76,6 +77,10 @@ public class BuildTimelinePlatformTest
     private static final int FAR = 1000;
 
     private static final int NEAR = 60;
+
+    private static final int VIEWPORT_HEIGHT = 80;
+
+    private static final int LANES = 10;
 
     private static final Font LARGE_FONT = new Font(Font.DIALOG, Font.PLAIN, 28);
 
@@ -666,6 +671,71 @@ public class BuildTimelinePlatformTest
         assertFalse(
             "a row chosen in the table has to be findable in the chart beside it",
             Arrays.equals(unmarked, pixelsOf(timeline)));
+    }
+
+    public void testPaintComponent_aChartTallerThanItsViewport_paintsNothingBelowTheClip()
+    {
+        BuildTimeline timeline = new BuildTimeline();
+
+        timeline.setProfile(profileWithManyLanes(), Set.of());
+        timeline.setSize(WIDTH, timeline.getPreferredSize().height);
+
+        assertTrue(
+            "the fixture has to overflow the clip, or there is nothing for the clip to hold back",
+            timeline.getHeight() > VIEWPORT_HEIGHT);
+
+        BufferedImage surface =
+            new BufferedImage(WIDTH, timeline.getHeight(), BufferedImage.TYPE_INT_RGB);
+
+        Graphics2D canvas = surface.createGraphics();
+
+        try
+        {
+            canvas.setColor(Color.MAGENTA);
+            canvas.fillRect(0, 0, surface.getWidth(), surface.getHeight());
+            canvas.clipRect(0, 0, WIDTH, VIEWPORT_HEIGHT);
+
+            timeline.paint(canvas);
+        }
+        finally
+        {
+            canvas.dispose();
+        }
+
+        assertEquals(
+            "a clip replaced rather than narrowed lets the bars paint over whatever sits below the chart",
+            0,
+            paintedBelow(surface, VIEWPORT_HEIGHT));
+    }
+
+    private static BuildProfile profileWithManyLanes()
+    {
+        BuildProfile profile = new BuildProfile();
+
+        for (int lane = 0; lane < LANES; lane++)
+        {
+            profile.accept(new ModuleTiming(MODULE + lane, 0L, LONG_BUILD_MILLIS));
+        }
+
+        return profile;
+    }
+
+    private static int paintedBelow(BufferedImage surface, int limit)
+    {
+        int painted = 0;
+
+        for (int y = limit; y < surface.getHeight(); y++)
+        {
+            for (int x = 0; x < surface.getWidth(); x++)
+            {
+                if (surface.getRGB(x, y) != Color.MAGENTA.getRGB())
+                {
+                    painted++;
+                }
+            }
+        }
+
+        return painted;
     }
 
     private static int[] pixelsOf(BuildTimeline timeline)

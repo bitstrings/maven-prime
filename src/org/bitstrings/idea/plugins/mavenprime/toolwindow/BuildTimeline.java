@@ -550,27 +550,34 @@ public final class BuildTimeline
             canvas.drawLine(position, rulerHeight(), position, getHeight());
         }
 
-        canvas.setColor(UIUtil.getContextHelpForeground());
-        canvas.setClip(0, 0, getWidth(), rulerHeight());
+        Graphics2D band = (Graphics2D) canvas.create();
 
-        int drawnTo = 0;
-
-        for (int tick = 0; tick <= TICK_COUNT; tick++)
+        try
         {
-            String label = Formats.formatDuration((wallClockMillis * tick) / TICK_COUNT);
+            band.setColor(UIUtil.getContextHelpForeground());
+            band.clipRect(0, 0, getWidth(), rulerHeight());
 
-            int width = metrics.stringWidth(label);
-            int x = tickLabelX(gutter + ((usable * tick) / TICK_COUNT), width);
+            int drawnTo = 0;
 
-            if (x >= drawnTo)
+            for (int tick = 0; tick <= TICK_COUNT; tick++)
             {
-                canvas.drawString(label, x, metrics.getAscent());
+                String label = Formats.formatDuration((wallClockMillis * tick) / TICK_COUNT);
 
-                drawnTo = x + width + JBUI.scale(LABEL_PADDING);
+                int width = metrics.stringWidth(label);
+                int x = tickLabelX(gutter + ((usable * tick) / TICK_COUNT), width);
+
+                if (x >= drawnTo)
+                {
+                    band.drawString(label, x, metrics.getAscent());
+
+                    drawnTo = x + width + JBUI.scale(LABEL_PADDING);
+                }
             }
         }
-
-        canvas.setClip(null);
+        finally
+        {
+            band.dispose();
+        }
     }
 
     // The last tick sits at the right edge, so its label is hung to the left of the line instead.
