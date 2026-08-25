@@ -19,12 +19,14 @@ import org.bitstrings.idea.plugins.mavenprime.goals.GoalRegistry;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalRunner;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalScope;
 import org.bitstrings.idea.plugins.mavenprime.goals.ScopedGoal;
+import org.bitstrings.idea.plugins.mavenprime.ui.CommandAction;
 import org.bitstrings.idea.plugins.mavenprime.ui.GoalEditorDialog;
 import org.bitstrings.idea.plugins.mavenprime.ui.GoalPresentation;
 import org.bitstrings.idea.plugins.mavenprime.ui.ProjectTrustBanner;
 import org.bitstrings.idea.plugins.mavenprime.util.ProjectTrust;
 import org.jetbrains.idea.maven.project.MavenProject;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -86,6 +88,7 @@ public final class GoalsPanel
                 .setMoveDownAction(button -> moveGoal(1))
                 .setMoveUpActionUpdater(event -> canMoveGoal(-1))
                 .setMoveDownActionUpdater(event -> canMoveGoal(1))
+                .addExtraAction(cloneAction())
                 .addExtraAction(executeAction(ExecutionMode.RUN))
                 .addExtraAction(executeAction(ExecutionMode.DEBUG))
                 .createPanel(),
@@ -179,7 +182,12 @@ public final class GoalsPanel
 
     private void addGoal()
     {
-        GoalEditorDialog dialog = new GoalEditorDialog(project, new GoalDefinition(), GoalScope.PROJECT);
+        createGoal(new GoalDefinition(), GoalScope.PROJECT);
+    }
+
+    private void createGoal(GoalDefinition definition, GoalScope scope)
+    {
+        GoalEditorDialog dialog = new GoalEditorDialog(project, definition, scope);
 
         if (dialog.showAndGet())
         {
@@ -205,6 +213,23 @@ public final class GoalsPanel
 
                     TableUtil.scrollSelectionToVisible(goalTable);
                 });
+    }
+
+    private void cloneGoal()
+    {
+        ScopedGoal selected = goalTable.getSelectedObject();
+
+        if (selected == null)
+        {
+            return;
+        }
+
+        GoalDefinition copy = selected.definition().copy();
+
+        copy.name =
+            MavenPrimeBundle.message("mavenprime.goals.clone.name", selected.definition().getDisplayName());
+
+        createGoal(copy, selected.scope());
     }
 
     private void editGoal()
@@ -267,6 +292,16 @@ public final class GoalsPanel
 
         return (selected != null)
             && GoalRegistry.getInstance(project).canMove(selected.scope(), selected.definition().id, delta);
+    }
+
+    private CommandAction cloneAction()
+    {
+        return new CommandAction(
+            MavenPrimeBundle.message("mavenprime.goals.clone"),
+            MavenPrimeBundle.message("mavenprime.goals.clone.description"),
+            AllIcons.Actions.Copy,
+            this::cloneGoal,
+            () -> goalTable.getSelectedObject() != null);
     }
 
     private ExecuteGoalAction executeAction(ExecutionMode mode)

@@ -155,6 +155,28 @@ public class GoalRegistryPlatformTest
             registry().move(GoalScope.GLOBAL, last.id, 1));
     }
 
+    public void testAdd_aCopyOfAGoalAlreadyStored_givesItAnIdOfItsOwn()
+    {
+        GoalDefinition original = store(GoalDefinition.of("clean install"));
+
+        String clone = registry().add(GoalScope.GLOBAL, original.copy());
+
+        assertFalse(
+            "a clone sharing its source's id shadows it in the keymap and in every goal action",
+            original.id.equals(clone));
+        assertNotNull(registry().find(original.id));
+        assertNotNull(registry().find(clone));
+    }
+
+    public void testAdd_aCopyRenamedAsTheEditorRenamesIt_takesItsIdFromTheNewName()
+    {
+        GoalDefinition copy = store(GoalDefinition.of("clean install")).copy();
+
+        copy.name = "clean install copy";
+
+        assertEquals("clean-install-copy", registry().add(GoalScope.GLOBAL, copy));
+    }
+
     private GoalRegistry registry()
     {
         return GoalRegistry.getInstance(getProject());
