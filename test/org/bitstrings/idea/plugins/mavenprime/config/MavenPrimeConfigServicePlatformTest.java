@@ -26,6 +26,10 @@ public class MavenPrimeConfigServicePlatformTest
         try
         {
             deleteConfigFile();
+
+            store().set(new MavenPrimeConfig());
+
+            service().invalidate();
         }
         finally
         {
@@ -33,14 +37,16 @@ public class MavenPrimeConfigServicePlatformTest
         }
     }
 
-    public void testSetGoals_noConfigFileYet_createsIt()
+    public void testSetGoals_noConfigFileYet_leavesItUncreated()
     {
         service().setGoals(List.of(GoalDefinition.of("Fast build", "clean install")));
 
-        assertNotNull(service().findConfigFile());
+        assertNull(
+            "a project that never asked for the shared file must not find one committed on its behalf",
+            service().findConfigFile());
     }
 
-    public void testGetGoals_afterSetGoals_readsThemBackFromDisk()
+    public void testGetGoals_setWithNoConfigFile_readsThemBackFromTheProjectStore()
     {
         service().setGoals(List.of(GoalDefinition.of("Fast build", "clean install")));
 
@@ -52,8 +58,11 @@ public class MavenPrimeConfigServicePlatformTest
         assertEquals("clean install", stored.get(0).getGoalLine());
     }
 
-    public void testSetGoals_goalCarryingFlagsAndProperties_survivesTheRoundTrip()
+    public void testSetGoals_goalCarryingFlagsAndProperties_survivesTheRoundTripOnDisk()
+        throws IOException
     {
+        overwriteConfig("{\"version\":1}");
+
         GoalDefinition definition = GoalDefinition.of("Quiet", "verify");
 
         definition.template.flags.add(MavenFlag.SKIP_TESTS);
@@ -66,6 +75,98 @@ public class MavenPrimeConfigServicePlatformTest
 
         assertTrue(restored.flags.contains(MavenFlag.SKIP_TESTS));
         assertEquals("1.2.3", restored.properties.get("revision"));
+    }
+
+    public void testCreateSharedFile_noConfigFileYet_writesTheGoalsTheProjectAlreadyHas()
+    {
+        service().setGoals(List.of(GoalDefinition.of("Fast build", "clean install")));
+
+        assertNotNull(service().createSharedFile(MavenPrimeConfig.of(null, service().getGoals())));
+
+        service().invalidate();
+
+        assertEquals("clean install", service().getGoals().get(0).getGoalLine());
+    }
+
+    public void testCreateSharedFile_aConfigFileAlreadyThere_leavesItsContentAlone()
+        throws IOException
+    {
+        overwriteConfig("{\"version\":1,\"goals\":[{\"name\":\"Shared\",\"request\":{\"goals\":[\"verify\"]}}]}");
+
+        service().createSharedFile(MavenPrimeConfig.of(null, List.of(GoalDefinition.of("Other", "package"))));
+
+        service().invalidate();
+
+        assertEquals(
+            "overwriting the team's file is never what a create was asked to do",
+            "verify",
+            service().getGoals().get(0).getGoalLine());
+    }
+
+    public void testGetGoals_aConfigFileBesideTheProjectStore_takesTheFileAsAuthority()
+        throws IOException
+    {
+        service().setGoals(List.of(GoalDefinition.of("Local", "clean")));
+
+        overwriteConfig("{\"version\":1,\"goals\":[{\"name\":\"Shared\",\"request\":{\"goals\":[\"verify\"]}}]}");
+
+        List<GoalDefinition> goals = service().getGoals();
+
+        assertEquals(1, goals.size());
+        assertEquals("verify", goals.get(0).getGoalLine());
+    }
+
+    public void testGetGoals_theConfigFileDeletedAgain_fallsBackToTheProjectStore()
+        throws IOException
+    {
+        service().setGoals(List.of(GoalDefinition.of("Local", "clean")));
+
+        overwriteConfig("{\"version\":1,\"goals\":[{\"name\":\"Shared\",\"request\":{\"goals\":[\"verify\"]}}]}");
+        deleteConfigFile();
+
+        assertEquals("clean", service().getGoals().get(0).getGoalLine());
+    }
+
+    public void testSetGoals_savedWhileTheConfigFileExisted_survivesDeletingIt()
+        throws IOException
+    {
+        overwriteConfig("{\"version\":1,\"goals\":[{\"name\":\"Shared\",\"request\":{\"goals\":[\"verify\"]}}]}");
+
+        service().setGoals(List.of(GoalDefinition.of("Added later", "package")));
+
+        deleteConfigFile();
+
+        assertEquals(
+            "a store left behind while the team file was authoritative loses every goal saved meanwhile",
+            "package",
+            service().getGoals().get(0).getGoalLine());
+    }
+
+    public void testSetGoals_aProjectStoreFromANewerPlugin_isNotWrittenOver()
+    {
+        MavenPrimeConfig newer = MavenPrimeConfig.of(null, List.of(GoalDefinition.of("Future", "verify")));
+
+        newer.version = MavenPrimeConfig.CURRENT_VERSION + 1;
+
+        store().set(newer);
+
+        service().invalidate();
+        service().setGoals(List.of(GoalDefinition.of("Mine", "package")));
+
+        assertEquals(
+            "a store written by a newer plugin loses whatever this one cannot model if it writes over it",
+            "verify",
+            store().getState().getGoalDefinitions().get(0).getGoalLine());
+    }
+
+    public void testCreateSharedFile_theFileDeletedRightAfter_fallsBackToWhatItCaptured()
+        throws IOException
+    {
+        service().createSharedFile(MavenPrimeConfig.of(null, List.of(GoalDefinition.of("Captured", "install"))));
+
+        deleteConfigFile();
+
+        assertEquals("install", service().getGoals().get(0).getGoalLine());
     }
 
     public void testGetDefaults_fileDeclaringDefaults_readsProfilesAndProperties()
@@ -175,6 +276,11 @@ public class MavenPrimeConfigServicePlatformTest
     private MavenPrimeConfigService service()
     {
         return MavenPrimeConfigService.getInstance(getProject());
+    }
+
+    private ProjectConfigStore store()
+    {
+        return ProjectConfigStore.getInstance(getProject());
     }
 
     private void overwriteConfig(String json)

@@ -131,15 +131,62 @@ public final class MavenPrimeConfigService
 
     public void setGoals(List<GoalDefinition> goals)
     {
-        if (goals.isEmpty() && (findConfigFile() == null))
-        {
-            return;
-        }
-
         if (write(MavenPrimeConfig.of(snapshot.get().config().defaults, goals)))
         {
             invalidate();
         }
+    }
+
+    public VirtualFile createSharedFile(MavenPrimeConfig config)
+    {
+        VirtualFile existing = findConfigFile();
+
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        if (!ProjectTrust.isTrusted(project))
+        {
+            MavenPrimeNotifications.error(
+                project, MavenPrimeBundle.message("mavenprime.config.untrusted", FILE_NAME));
+
+            return null;
+        }
+
+        VirtualFile directory = rootDirectory();
+
+        if (directory == null)
+        {
+            MavenPrimeNotifications.error(project, MavenPrimeBundle.message("mavenprime.config.noRoot", FILE_NAME));
+
+            return null;
+        }
+
+        String text = GSON.toJson(config);
+
+        try
+        {
+            WriteAction.run(() -> VfsUtil.saveText(directory.createChildData(this, FILE_NAME), text));
+        }
+        catch (IOException failure)
+        {
+            MavenPrimeNotifications.error(
+                project, MavenPrimeBundle.message("mavenprime.config.writeFailed", FILE_NAME, failure.getMessage()));
+
+            return null;
+        }
+
+        ProjectConfigStore.getInstance(project).set(config);
+
+        invalidate();
+
+        VirtualFile created = findConfigFile();
+
+        MavenPrimeNotifications.info(
+            project, MavenPrimeBundle.message("mavenprime.config.created", FILE_NAME));
+
+        return created;
     }
 
     public VirtualFile findConfigFile()
@@ -200,32 +247,16 @@ public final class MavenPrimeConfigService
 
         if (file == null)
         {
-            return Snapshot.of(new MavenPrimeConfig(), true);
+            return accept(
+                ProjectConfigStore.getInstance(project).getState(),
+                Project.DIRECTORY_STORE_FOLDER + '/' + ProjectConfigStore.FILE_NAME);
         }
 
         try
         {
             MavenPrimeConfig parsed = GSON.fromJson(VfsUtil.loadText(file), MavenPrimeConfig.class);
 
-            if (parsed == null)
-            {
-                return Snapshot.of(new MavenPrimeConfig(), true);
-            }
-
-            if (parsed.version > MavenPrimeConfig.CURRENT_VERSION)
-            {
-                MavenPrimeNotifications.warning(
-                    project,
-                    MavenPrimeBundle.message(
-                        "mavenprime.config.newerVersion",
-                        FILE_NAME,
-                        Integer.valueOf(parsed.version),
-                        Integer.valueOf(MavenPrimeConfig.CURRENT_VERSION)));
-
-                return Snapshot.of(parsed, false);
-            }
-
-            return Snapshot.of(parsed, true);
+            return (parsed == null) ? Snapshot.of(new MavenPrimeConfig(), true) : accept(parsed, FILE_NAME);
         }
         catch (IOException | JsonParseException failure)
         {
@@ -234,6 +265,24 @@ public final class MavenPrimeConfigService
 
             return Snapshot.of(new MavenPrimeConfig(), false);
         }
+    }
+
+    private Snapshot accept(MavenPrimeConfig config, String source)
+    {
+        if (config.version <= MavenPrimeConfig.CURRENT_VERSION)
+        {
+            return Snapshot.of(config, true);
+        }
+
+        MavenPrimeNotifications.warning(
+            project,
+            MavenPrimeBundle.message(
+                "mavenprime.config.newerVersion",
+                source,
+                Integer.valueOf(config.version),
+                Integer.valueOf(MavenPrimeConfig.CURRENT_VERSION)));
+
+        return Snapshot.of(config, false);
     }
 
     private boolean write(MavenPrimeConfig config)
@@ -254,38 +303,29 @@ public final class MavenPrimeConfigService
             return false;
         }
 
-        VirtualFile directory = rootDirectory();
+        VirtualFile file = findConfigFile();
 
-        if (directory == null)
+        if (file != null)
         {
-            MavenPrimeNotifications.error(project, MavenPrimeBundle.message("mavenprime.config.noRoot", FILE_NAME));
+            String text = GSON.toJson(config);
 
-            return false;
+            try
+            {
+                WriteAction.run(() -> VfsUtil.saveText(file, text));
+            }
+            catch (IOException failure)
+            {
+                MavenPrimeNotifications.error(
+                    project,
+                    MavenPrimeBundle.message("mavenprime.config.writeFailed", FILE_NAME, failure.getMessage()));
+
+                return false;
+            }
         }
 
-        String text = GSON.toJson(config);
+        ProjectConfigStore.getInstance(project).set(config);
 
-        try
-        {
-            WriteAction.run(() -> save(directory, text));
-
-            return true;
-        }
-        catch (IOException failure)
-        {
-            MavenPrimeNotifications.error(
-                project, MavenPrimeBundle.message("mavenprime.config.writeFailed", FILE_NAME, failure.getMessage()));
-
-            return false;
-        }
-    }
-
-    private void save(VirtualFile directory, String text)
-        throws IOException
-    {
-        VirtualFile file = directory.findChild(FILE_NAME);
-
-        VfsUtil.saveText((file == null) ? directory.createChildData(this, FILE_NAME) : file, text);
+        return true;
     }
 
     private VirtualFile rootDirectory()
