@@ -139,6 +139,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.1.1</b>
+      <ul>
+        <li>
+          <b>Profiler</b>: the timeline no longer paints its bars over the rest of the tool window on builds
+          with more modules running at once than fit on screen, or at any zoom past the whole build.
+        </li>
+      </ul>
+
       <b>1.1.0</b>
       <ul>
         <li>
