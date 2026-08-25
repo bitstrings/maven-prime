@@ -10,6 +10,7 @@ import org.jetbrains.idea.maven.model.MavenArtifactNode;
 import org.jetbrains.idea.maven.model.MavenId;
 import org.jetbrains.idea.maven.project.MavenProject;
 
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -27,6 +28,11 @@ public final class DependencyExcluder
     }
 
     public static void exclude(Project project, MavenProject mavenProject, MavenArtifactNode node)
+    {
+        WriteIntentReadAction.run((Runnable) () -> excludeFrom(project, mavenProject, node));
+    }
+
+    private static void excludeFrom(Project project, MavenProject mavenProject, MavenArtifactNode node)
     {
         if (!isExcludable(node))
         {

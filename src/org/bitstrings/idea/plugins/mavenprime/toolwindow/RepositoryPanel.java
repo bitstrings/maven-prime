@@ -61,6 +61,7 @@ import com.intellij.openapi.actionSystem.DataSink;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.actionSystem.UiDataProvider;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -829,6 +830,11 @@ public final class RepositoryPanel
     }
 
     private void goToDeclaration()
+    {
+        WriteIntentReadAction.run((Runnable) this::navigateToDeclaration);
+    }
+
+    private void navigateToDeclaration()
     {
         ArtifactCoordinates selected = selection();
 

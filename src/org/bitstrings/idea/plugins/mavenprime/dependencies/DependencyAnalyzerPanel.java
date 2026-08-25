@@ -42,6 +42,7 @@ import com.intellij.ide.util.treeView.TreeState;
 import com.intellij.ide.actions.RevealFileAction;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
@@ -785,11 +786,12 @@ public final class DependencyAnalyzerPanel
 
         MavenArtifact artifact = selected.getArtifact();
 
-        PomDependencies.navigateTo(
-            PomDependencies.findManagedDeclaration(
-                PomDependencies.modelOf(project, mavenProject),
-                artifact.getGroupId(),
-                artifact.getArtifactId()));
+        WriteIntentReadAction.run(
+            (Runnable) () -> PomDependencies.navigateTo(
+                PomDependencies.findManagedDeclaration(
+                    PomDependencies.modelOf(project, mavenProject),
+                    artifact.getGroupId(),
+                    artifact.getArtifactId())));
     }
 
     private static String ruleTextOf(DependencyPaths.ResolutionVerdict verdict)
@@ -1060,7 +1062,9 @@ public final class DependencyAnalyzerPanel
             return;
         }
 
-        PomDependencies.navigateTo(PomDependencies.declarationOf(project, mavenProject, selected));
+        WriteIntentReadAction.run(
+            (Runnable) () -> PomDependencies.navigateTo(
+                PomDependencies.declarationOf(project, mavenProject, selected)));
     }
 
     private void goToSelectedModule()

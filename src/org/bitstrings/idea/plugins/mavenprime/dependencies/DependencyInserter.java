@@ -9,6 +9,7 @@ import org.jetbrains.idea.maven.dom.model.MavenDomProjectModel;
 import org.jetbrains.idea.maven.model.MavenConstants;
 import org.jetbrains.idea.maven.project.MavenProject;
 
+import com.intellij.openapi.application.WriteIntentReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
@@ -22,6 +23,12 @@ public final class DependencyInserter
     }
 
     public static void insert(Project project, MavenProject mavenProject, ArtifactCoordinates coordinates)
+    {
+        WriteIntentReadAction.run((Runnable) () -> insertInto(project, mavenProject, coordinates));
+    }
+
+    private static void insertInto(
+        Project project, MavenProject mavenProject, ArtifactCoordinates coordinates)
     {
         MavenDomProjectModel model = PomDependencies.modelOf(project, mavenProject);
 
