@@ -335,6 +335,15 @@
                 anchor="after"
                 relative-to-action="Maven.ShowSettings"/>
         </action>
+        <action
+            id="MavenPrime.CreateSharedConfig"
+            class="org.bitstrings.idea.plugins.mavenprime.actions.CreateSharedConfigAction"
+            icon="AllIcons.FileTypes.Json">
+            <add-to-group
+                group-id="Maven.ShowSettingsGroup"
+                anchor="before"
+                relative-to-action="MavenPrime.ShowSettings"/>
+        </action>
     </actions>
 
 </idea-plugin>

@@ -4,9 +4,11 @@ import java.awt.BorderLayout;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.config.MavenPrimeConfigService;
+import org.bitstrings.idea.plugins.mavenprime.config.SharedConfigTemplate;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalDefinition;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalRegistry;
@@ -16,10 +18,11 @@ import org.bitstrings.idea.plugins.mavenprime.util.UiTopics;
 
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.VerticalFlowLayout;
 import com.intellij.ui.IdeBorderFactory;
+import com.intellij.ui.components.ActionLink;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBTabbedPane;
+import com.intellij.util.ui.FormBuilder;
 
 public final class MavenPrimeConfigurable
     implements Configurable
@@ -74,15 +77,20 @@ public final class MavenPrimeConfigurable
             new JBCheckBox(
                 MavenPrimeBundle.message("mavenprime.sharedContext", MavenPrimeConfigService.FILE_NAME));
 
-        JPanel header = new JPanel(new VerticalFlowLayout(VerticalFlowLayout.TOP, 0, 0, true, false));
-
-        header.add(sharedContextBox);
-        header.add(
-            HintLabel.under(sharedContextBox, "mavenprime.sharedContext.hint", MavenPrimeConfigService.FILE_NAME));
-        header.add(autoRefreshBox);
-        header.add(HintLabel.under(autoRefreshBox, "mavenprime.autoRefresh.hint"));
-        header.add(colorConsoleBox);
-        header.add(HintLabel.under(colorConsoleBox, "mavenprime.colorConsole.hint"));
+        JPanel header =
+            FormBuilder
+                .createFormBuilder()
+                .setVerticalGap(0)
+                .addComponent(sharedContextBox)
+                .addComponent(
+                    HintLabel.under(
+                        sharedContextBox, "mavenprime.sharedContext.hint", MavenPrimeConfigService.FILE_NAME))
+                .addComponent(createSharedConfigLink())
+                .addComponent(autoRefreshBox)
+                .addComponent(HintLabel.under(autoRefreshBox, "mavenprime.autoRefresh.hint"))
+                .addComponent(colorConsoleBox)
+                .addComponent(HintLabel.under(colorConsoleBox, "mavenprime.colorConsole.hint"))
+                .getPanel();
 
         JPanel panel = new JPanel(new BorderLayout());
 
@@ -92,6 +100,27 @@ public final class MavenPrimeConfigurable
         reset();
 
         return panel;
+    }
+
+    private JComponent createSharedConfigLink()
+    {
+        ActionLink link = new ActionLink();
+
+        link.setText(MavenPrimeBundle.message("action.MavenPrime.CreateSharedConfig.text"));
+        link.setHorizontalAlignment(SwingConstants.LEFT);
+        link.setEnabled(MavenPrimeConfigService.getInstance(project).findConfigFile() == null);
+        link.addActionListener(
+            event ->
+            {
+                apply();
+
+                link.setEnabled(
+                    MavenPrimeConfigService
+                        .getInstance(project)
+                        .createSharedFile(SharedConfigTemplate.of(project)) == null);
+            });
+
+        return HintLabel.alignUnder(sharedContextBox, link);
     }
 
     @Override

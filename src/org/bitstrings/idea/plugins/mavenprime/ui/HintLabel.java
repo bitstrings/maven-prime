@@ -38,16 +38,19 @@ public final class HintLabel
 
     public static JComponent under(JCheckBox anchor, String bundleKey, Object... params)
     {
-        JComponent hint = forKey(bundleKey, params);
+        return alignUnder(anchor, forKey(bundleKey, params));
+    }
 
-        hint.setBorder(
+    public static <T extends JComponent> T alignUnder(JCheckBox anchor, T component)
+    {
+        component.setBorder(
             new EmptyBorder(
                 0,
                 UIUtil.getCheckBoxTextHorizontalOffset(anchor),
                 JBUI.scale(UIUtil.DEFAULT_VGAP),
                 0));
 
-        return hint;
+        return component;
     }
 
     public static String bounded(int width, String text)
