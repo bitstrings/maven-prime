@@ -23,6 +23,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
+import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.VerticalFlowLayout;
@@ -82,11 +83,11 @@ public final class BuildProfilePanel
 
     final JPanel header = buildHeader();
 
-    final JComponent toolbar = buildToolbar();
+    final JComponent toolbar;
 
     private final transient BuildSelector<BuildProfile> buildSelector;
 
-    public BuildProfilePanel(Project project)
+    public BuildProfilePanel(Project project, AnAction... hostActions)
     {
         super(new BorderLayout());
 
@@ -94,6 +95,7 @@ public final class BuildProfilePanel
         this.state = new UiState(project, STATE_PREFIX);
         this.buildSelector =
             new BuildSelector<>(entry -> BuildProfileService.getInstance(project).select(entry));
+        this.toolbar = buildToolbar(hostActions);
 
         add(buildNorth(), BorderLayout.NORTH);
         add(buildContent(), BorderLayout.CENTER);
@@ -170,7 +172,7 @@ public final class BuildProfilePanel
         applyVisibility();
     }
 
-    private JComponent buildToolbar()
+    private JComponent buildToolbar(AnAction... hostActions)
     {
         DefaultActionGroup group = new DefaultActionGroup();
 
@@ -217,6 +219,12 @@ public final class BuildProfilePanel
                 AllIcons.General.FitContent,
                 timeline::zoomToFit,
                 () -> isShown(TIMELINE_KEY) && (timeline.getZoom() > BuildTimeline.FIT)));
+
+        if (hostActions.length > 0)
+        {
+            group.addSeparator();
+            group.addAll(hostActions);
+        }
 
         ActionToolbar toolbar = ActionManager.getInstance().createActionToolbar(TOOLBAR_PLACE, group, true);
 

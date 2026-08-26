@@ -39,6 +39,8 @@ public final class MavenPrimeConfigurable
 
     private JBCheckBox sharedContextBox;
 
+    private JBCheckBox profileNotificationsBox;
+
     public MavenPrimeConfigurable(Project project)
     {
         this.project = project;
@@ -76,6 +78,8 @@ public final class MavenPrimeConfigurable
         sharedContextBox =
             new JBCheckBox(
                 MavenPrimeBundle.message("mavenprime.sharedContext", MavenPrimeConfigService.FILE_NAME));
+        profileNotificationsBox =
+            new JBCheckBox(MavenPrimeBundle.message("mavenprime.profileNotifications"));
 
         JPanel header =
             FormBuilder
@@ -90,6 +94,9 @@ public final class MavenPrimeConfigurable
                 .addComponent(HintLabel.under(autoRefreshBox, "mavenprime.autoRefresh.hint"))
                 .addComponent(colorConsoleBox)
                 .addComponent(HintLabel.under(colorConsoleBox, "mavenprime.colorConsole.hint"))
+                .addComponent(profileNotificationsBox)
+                .addComponent(
+                    HintLabel.under(profileNotificationsBox, "mavenprime.profileNotifications.hint"))
                 .getPanel();
 
         JPanel panel = new JPanel(new BorderLayout());
@@ -137,7 +144,8 @@ public final class MavenPrimeConfigurable
             || !registry.projectScoped().equals(projectPanel.getGoals())
             || (autoRefreshBox.isSelected() != settings().autoRefresh)
             || (colorConsoleBox.isSelected() != settings().colorConsole)
-            || (sharedContextBox.isSelected() != settings().sharedContext);
+            || (sharedContextBox.isSelected() != settings().sharedContext)
+            || (profileNotificationsBox.isSelected() != settings().profileNotifications);
     }
 
     @Override
@@ -165,6 +173,7 @@ public final class MavenPrimeConfigurable
         settings().autoRefresh = autoRefreshBox.isSelected();
         settings().colorConsole = colorConsoleBox.isSelected();
         settings().sharedContext = sharedContextBox.isSelected();
+        settings().profileNotifications = profileNotificationsBox.isSelected();
 
         if (sharedContextChanged)
         {
@@ -191,6 +200,7 @@ public final class MavenPrimeConfigurable
         autoRefreshBox.setSelected(settings().autoRefresh);
         colorConsoleBox.setSelected(settings().colorConsole);
         sharedContextBox.setSelected(settings().sharedContext);
+        profileNotificationsBox.setSelected(settings().profileNotifications);
     }
 
     private boolean isShowing()
@@ -199,7 +209,8 @@ public final class MavenPrimeConfigurable
             && (projectPanel != null)
             && (autoRefreshBox != null)
             && (colorConsoleBox != null)
-            && (sharedContextBox != null);
+            && (sharedContextBox != null)
+            && (profileNotificationsBox != null);
     }
 
     @Override
@@ -210,6 +221,7 @@ public final class MavenPrimeConfigurable
         autoRefreshBox = null;
         colorConsoleBox = null;
         sharedContextBox = null;
+        profileNotificationsBox = null;
     }
 
     private MavenPrimeSettings settings()

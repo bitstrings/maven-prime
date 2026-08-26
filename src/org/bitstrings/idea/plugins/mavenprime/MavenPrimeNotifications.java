@@ -1,7 +1,11 @@
 package org.bitstrings.idea.plugins.mavenprime;
 
+import java.util.List;
+
+import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
+import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.project.Project;
 
 public final class MavenPrimeNotifications
@@ -12,27 +16,33 @@ public final class MavenPrimeNotifications
     {
     }
 
-    public static void error(Project project, String content)
+    public static Notification error(Project project, String content, AnAction... actions)
     {
-        notify(project, content, NotificationType.ERROR);
+        return notify(project, content, NotificationType.ERROR, actions);
     }
 
-    public static void warning(Project project, String content)
+    public static Notification warning(Project project, String content, AnAction... actions)
     {
-        notify(project, content, NotificationType.WARNING);
+        return notify(project, content, NotificationType.WARNING, actions);
     }
 
-    public static void info(Project project, String content)
+    public static Notification info(Project project, String content, AnAction... actions)
     {
-        notify(project, content, NotificationType.INFORMATION);
+        return notify(project, content, NotificationType.INFORMATION, actions);
     }
 
-    private static void notify(Project project, String content, NotificationType type)
+    private static Notification notify(
+        Project project, String content, NotificationType type, AnAction... actions)
     {
-        NotificationGroupManager
-            .getInstance()
-            .getNotificationGroup(GROUP_ID)
-            .createNotification(MavenPrimeBundle.message("mavenprime.name"), content, type)
-            .notify(project);
+        Notification notification =
+            NotificationGroupManager
+                .getInstance()
+                .getNotificationGroup(GROUP_ID)
+                .createNotification(MavenPrimeBundle.message("mavenprime.name"), content, type)
+                .addActions(List.of(actions));
+
+        notification.notify(project);
+
+        return notification;
     }
 }

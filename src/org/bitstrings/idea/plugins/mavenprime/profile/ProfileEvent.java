@@ -29,4 +29,9 @@ public sealed interface ProfileEvent
         implements ProfileEvent
     {
     }
+
+    record ModuleFailed(String module)
+        implements ProfileEvent
+    {
+    }
 }

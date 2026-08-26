@@ -27,6 +27,8 @@ public final class MavenPrimeSettings
 
     public boolean searchEverywhere;
 
+    public boolean profileNotifications;
+
     public String importerVmOptions = StringUtils.EMPTY;
 
     public interface SettingsListener

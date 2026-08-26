@@ -18,7 +18,7 @@ public final class SpyChannel
 {
     private static final ChannelAction FLUSH = Writer::flush;
 
-    private static final int DEFAULT_CAPACITY = 4096;
+    private static final int DEFAULT_CAPACITY = 65536;
 
     private static final long POLL_INTERVAL_MILLIS = 50L;
 

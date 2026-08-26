@@ -4,6 +4,7 @@ import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalActions;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalRegistry;
 import org.bitstrings.idea.plugins.mavenprime.model.ModelAutoRefresher;
+import org.bitstrings.idea.plugins.mavenprime.toolwindow.BuildProfileNotifier;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.startup.ProjectActivity;
@@ -24,6 +25,8 @@ public final class MavenPrimeStartupActivity
         BuildContext.getInstance(project).listen();
 
         ModelAutoRefresher.getInstance(project).listen();
+
+        BuildProfileNotifier.getInstance(project).listen();
 
         return Unit.INSTANCE;
     }

@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleFailed;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ReactorEdge;
@@ -35,6 +36,7 @@ public final class ProfileEvents
             case SpyProtocol.PROJECT_TIMING -> moduleTiming(fields);
             case SpyProtocol.MOJO_TIMING -> mojoTiming(fields);
             case SpyProtocol.REACTOR_EDGE -> reactorEdge(fields);
+            case SpyProtocol.PROJECT_FAILED -> moduleFailed(fields);
             default -> Optional.empty();
         };
     }
@@ -62,6 +64,13 @@ public final class ProfileEvents
         return (StringUtils.isBlank(module) || StringUtils.isBlank(goal) || (start < 0) || (duration < 0))
             ? Optional.empty()
             : Optional.of(new MojoTiming(module, goal, field(fields, 3), start, duration));
+    }
+
+    private static Optional<ProfileEvent> moduleFailed(String[] fields)
+    {
+        String module = field(fields, MODULE);
+
+        return StringUtils.isBlank(module) ? Optional.empty() : Optional.of(new ModuleFailed(module));
     }
 
     private static Optional<ProfileEvent> reactorEdge(String[] fields)

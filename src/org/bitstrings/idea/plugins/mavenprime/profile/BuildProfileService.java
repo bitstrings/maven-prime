@@ -16,6 +16,9 @@ public final class BuildProfileService
     public static final Topic<BuildProfileListener> TOPIC =
         Topic.create("Maven Prime build profile", BuildProfileListener.class);
 
+    public static final Topic<BuildFinishedListener> FINISHED_TOPIC =
+        Topic.create("Maven Prime build profile finished", BuildFinishedListener.class);
+
     private final Project project;
 
     private final BuildHistory<BuildProfile> history = new BuildHistory<>(BuildProfile::new);
@@ -60,6 +63,8 @@ public final class BuildProfileService
     public void buildFinished()
     {
         publish();
+
+        UiTopics.publish(project, FINISHED_TOPIC, BuildFinishedListener::buildFinished);
     }
 
     public BuildProfile getCurrent()
@@ -75,5 +80,10 @@ public final class BuildProfileService
     public interface BuildProfileListener
     {
         void profileUpdated();
+    }
+
+    public interface BuildFinishedListener
+    {
+        void buildFinished();
     }
 }

@@ -28,6 +28,7 @@ import org.bitstrings.idea.plugins.mavenprime.goals.GoalDefinition;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalRegistry;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalScope;
 import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
+import org.bitstrings.idea.plugins.mavenprime.ui.CommandAction;
 import org.bitstrings.idea.plugins.mavenprime.ui.GoalEditorDialog;
 import org.bitstrings.idea.plugins.mavenprime.ui.GoalsTextField;
 import org.bitstrings.idea.plugins.mavenprime.ui.RegisteredActions;
@@ -179,7 +180,14 @@ public final class MavenPrimeToolWindowPanel
 
         Disposer.register(this, navigatorPanel);
 
-        this.profilePanel = new BuildProfilePanel(project);
+        this.profilePanel =
+            new BuildProfilePanel(
+                project,
+                new CommandAction(
+                    MavenPrimeBundle.message("mavenprime.profile.openInEditor"),
+                    MavenPrimeBundle.message("mavenprime.profile.openInEditor.description"),
+                    AllIcons.Actions.OpenNewTab,
+                    () -> BuildProfileEditor.getInstance(project).open()));
 
         Disposer.register(this, profilePanel);
 

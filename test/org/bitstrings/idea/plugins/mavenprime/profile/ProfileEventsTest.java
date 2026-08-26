@@ -3,6 +3,7 @@ package org.bitstrings.idea.plugins.mavenprime.profile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleFailed;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ReactorEdge;
@@ -22,6 +23,19 @@ public class ProfileEventsTest
                 .orElseThrow();
 
         assertEquals(new ModuleTiming("org.example:core", 120L, 450L), event);
+    }
+
+    @Test
+    public void parse_projectFailed_namesTheModuleThatStoppedTheReactor()
+    {
+        ProfileEvent event =
+            ProfileEvents
+                .parse(
+                    SpyProtocol.encode(
+                        SpyProtocol.PROJECT_FAILED, "org.example:core", "Unable to resolve artifact"))
+                .orElseThrow();
+
+        assertEquals(new ModuleFailed("org.example:core"), event);
     }
 
     @Test

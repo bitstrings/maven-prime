@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfileSummary.Concurrency;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleFailed;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ReactorEdge;
@@ -24,11 +25,21 @@ public final class BuildProfile
 
     private final Map<String, Set<String>> upstreams = new TreeMap<>();
 
+    private final Set<String> failed = new TreeSet<>();
+
     private final BuildCompleteness completeness = new BuildCompleteness();
 
     public BuildCompleteness getCompleteness()
     {
         return completeness;
+    }
+
+    public boolean hasFailures()
+    {
+        synchronized (lock)
+        {
+            return !failed.isEmpty();
+        }
     }
 
     public void accept(ProfileEvent event)
@@ -41,6 +52,7 @@ public final class BuildProfile
                 case MojoTiming mojo -> mojos.add(mojo);
                 case ReactorEdge edge ->
                     upstreams.computeIfAbsent(edge.module(), key -> new TreeSet<>()).add(edge.upstream());
+                case ModuleFailed failure -> failed.add(failure.module());
             }
         }
     }
