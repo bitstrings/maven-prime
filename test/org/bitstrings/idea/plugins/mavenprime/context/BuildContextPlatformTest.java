@@ -320,6 +320,28 @@ public class BuildContextPlatformTest
             notified);
     }
 
+    public void testAbsorb_anImportThatFinished_tellsTheContextViewsToRedraw()
+    {
+        List<String> notified = new ArrayList<>();
+
+        getProject()
+            .getMessageBus()
+            .connect(getTestRootDisposable())
+            .subscribe(
+                BuildContext.TOPIC,
+                (BuildContext.BuildContextListener) () -> notified.add("changed"));
+
+        BuildContext.getInstance(getProject()).absorb();
+
+        UIUtil.dispatchAllInvocationEvents();
+
+        assertEquals(
+            "an import is the only thing that changes which profiles exist, so a view opened before "
+                + "it keeps listing the ones the modules it added or removed brought with them",
+            List.of("changed"),
+            notified);
+    }
+
     private BuildContext contextWith(BuildContextProperty property)
     {
         BuildContextProperties state = new BuildContextProperties();

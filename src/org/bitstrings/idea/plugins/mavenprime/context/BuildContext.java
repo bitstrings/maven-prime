@@ -32,6 +32,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.components.StoragePathMacros;
 import com.intellij.openapi.project.Project;
+import com.intellij.util.execution.ParametersListUtil;
 import com.intellij.util.messages.Topic;
 import com.intellij.util.ui.update.MergingUpdateQueue;
 import com.intellij.util.ui.update.Update;
@@ -41,6 +42,10 @@ import com.intellij.util.ui.update.Update;
 public final class BuildContext
     implements PersistentStateComponent<BuildContextProperties>, Disposable
 {
+    private static final boolean PUSH = true;
+
+    private static final boolean ABSORB_ONLY = false;
+
     public static final Topic<BuildContextListener> TOPIC =
         Topic.create("Maven Prime build context", BuildContextListener.class);
 
@@ -146,21 +151,34 @@ public final class BuildContext
 
     public void listen()
     {
-        MavenImports.onModelAvailable(project, this, this::sync);
+        MavenImports.onModelAvailable(project, this, this::sync, this::absorb);
 
         sync();
     }
 
     public void sync()
     {
+        removeLegacyImporterOptions();
+
         if (!MavenProjects.isMavenized(project))
         {
             return;
         }
 
-        syncProfiles(UnaryOperator.identity());
+        syncProfiles(UnaryOperator.identity(), PUSH);
+    }
 
-        pushToImporter();
+    // Reached only from a finished import: reconcile with what the IDE resolved, never write back.
+    public void absorb()
+    {
+        removeLegacyImporterOptions();
+
+        if (MavenProjects.isMavenized(project))
+        {
+            syncProfiles(UnaryOperator.identity(), ABSORB_ONLY);
+        }
+
+        contextChanged();
     }
 
     public BuildContextEnvironment getEnvironment()
@@ -280,7 +298,7 @@ public final class BuildContext
 
     public void setProfile(String name, Boolean enabled)
     {
-        syncProfiles(overrides -> ContextLayers.withOverride(overrides, name, enabled));
+        syncProfiles(overrides -> ContextLayers.withOverride(overrides, name, enabled), PUSH);
 
         reimport();
 
@@ -303,9 +321,7 @@ public final class BuildContext
             state.forceClean = null;
         }
 
-        syncProfiles(UnaryOperator.identity());
-
-        pushToImporter();
+        syncProfiles(UnaryOperator.identity(), PUSH);
 
         reimport();
 
@@ -350,11 +366,6 @@ public final class BuildContext
             state.ignoredProperties.removeAll(ContextLayers.keysOf(properties));
         }
 
-        if (pushToImporter())
-        {
-            reimport();
-        }
-
         modelChanged();
 
         contextChanged();
@@ -374,11 +385,6 @@ public final class BuildContext
             {
                 state.ignoredProperties.add(name);
             }
-        }
-
-        if (pushToImporter())
-        {
-            reimport();
         }
 
         modelChanged();
@@ -495,7 +501,7 @@ public final class BuildContext
             shared.forceClean);
     }
 
-    private void syncProfiles(UnaryOperator<List<ProfileOverride>> edit)
+    private void syncProfiles(UnaryOperator<List<ProfileOverride>> edit, boolean push)
     {
         Map<String, Boolean> shared = shared().getProfiles();
         Map<String, Boolean> explicit = ContextLayers.declaredProfiles(explicitProfiles());
@@ -513,7 +519,7 @@ public final class BuildContext
             state.pushedProfiles = ContextLayers.asOverrides(effective);
         }
 
-        if (!effective.equals(explicit))
+        if (push && !effective.equals(explicit))
         {
             pushProfiles(effective);
         }
@@ -556,24 +562,8 @@ public final class BuildContext
             .setExplicitProfiles(new MavenExplicitProfiles(enabled, disabled));
     }
 
-    private boolean pushToImporter()
-    {
-        MavenImportingSettings importing = MavenProjectsManager.getInstance(project).getImportingSettings();
-
-        String existing = importing.getVmOptionsForImporter();
-
-        String merged = ImporterVmOptions.merge(existing, getProperties());
-
-        if (merged.equals(existing))
-        {
-            return false;
-        }
-
-        importing.setVmOptionsForImporter(merged);
-
-        return true;
-    }
-
+    // The push re-resolves what the IDE already knows; only a forced update finds a module a
+    // profile just added.
     private void reimport()
     {
         if (!MavenPrimeSettings.getInstance(project).autoRefresh)
@@ -582,6 +572,39 @@ public final class BuildContext
         }
 
         reimportQueue.queue(Update.create(this, this::forceReimport));
+    }
+
+    public int applyToImporter()
+    {
+        MavenImportingSettings importing = MavenProjectsManager.getInstance(project).getImportingSettings();
+        MavenPrimeSettings settings = MavenPrimeSettings.getInstance(project);
+
+        String existing = importing.getVmOptionsForImporter();
+        String region = ImporterVmOptions.rendered(getProperties());
+        String merged = ImporterVmOptions.merge(existing, settings.importerVmOptions, region);
+
+        settings.importerVmOptions = region;
+
+        if (!merged.equals(existing))
+        {
+            importing.setVmOptionsForImporter(merged);
+        }
+
+        return ParametersListUtil.parse(region).size();
+    }
+
+    // The region used to be fenced by two -D markers that reached the importer JVM as real properties.
+    private void removeLegacyImporterOptions()
+    {
+        MavenImportingSettings importing = MavenProjectsManager.getInstance(project).getImportingSettings();
+
+        String existing = importing.getVmOptionsForImporter();
+        String cleaned = ImporterVmOptions.stripLegacy(existing);
+
+        if (!cleaned.equals(existing))
+        {
+            importing.setVmOptionsForImporter(cleaned);
+        }
     }
 
     private void contextChanged()

@@ -40,6 +40,13 @@ public final class MavenImports
 
     public static void onModelAvailable(Project project, Disposable parent, Runnable onAvailable)
     {
+        onModelAvailable(project, parent, onAvailable, onAvailable);
+    }
+
+    // Writing to the Maven model from onImported schedules another import, so the two are separable.
+    public static void onModelAvailable(
+        Project project, Disposable parent, Runnable onActivated, Runnable onImported)
+    {
         MavenProjectsManager manager = MavenProjectsManager.getInstance(project);
 
         manager.addManagerListener(
@@ -48,17 +55,16 @@ public final class MavenImports
                 @Override
                 public void activated()
                 {
-                    schedule(project, onAvailable);
+                    schedule(project, onActivated);
                 }
 
                 @Override
                 public void projectImportCompleted()
                 {
-                    schedule(project, onAvailable);
+                    schedule(project, onImported);
                 }
             },
             parent);
-
     }
 
     private static void schedule(Project project, Runnable action)

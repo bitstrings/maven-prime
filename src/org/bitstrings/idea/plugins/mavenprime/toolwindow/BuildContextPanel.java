@@ -20,6 +20,7 @@ import org.bitstrings.idea.plugins.mavenprime.config.MavenPrimeConfigService;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContextEnvironment;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContextProperty;
+import org.bitstrings.idea.plugins.mavenprime.ui.CommandAction;
 import org.bitstrings.idea.plugins.mavenprime.context.ContextOrigin;
 import org.bitstrings.idea.plugins.mavenprime.context.EnvironmentOverride;
 import org.bitstrings.idea.plugins.mavenprime.distribution.DistributionSpec;
@@ -40,6 +41,7 @@ import com.intellij.ui.DoubleClickListener;
 import com.intellij.ui.EditorNotificationPanel;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.SimpleTextAttributes;
+import com.intellij.icons.AllIcons;
 import com.intellij.ui.ToolbarDecorator;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.ui.NamedColorUtil;
@@ -109,6 +111,7 @@ public final class BuildContextPanel
                 .setRemoveAction(button -> removeProperty())
                 .setEditActionUpdater(event -> isEditable())
                 .setRemoveActionUpdater(event -> selectedProperty() != null)
+                .addExtraAction(applyToImporterAction())
                 .disableUpDownActions()
                 .createPanel(),
             BorderLayout.CENTER);
@@ -116,6 +119,27 @@ public final class BuildContextPanel
         refresh();
 
         TreeUtil.expandAll(tree);
+    }
+
+    private CommandAction applyToImporterAction()
+    {
+        return new CommandAction(
+            MavenPrimeBundle.message("mavenprime.context.applyToImporter"),
+            MavenPrimeBundle.message("mavenprime.context.applyToImporter.description"),
+            AllIcons.Actions.Upload,
+            this::applyToImporter);
+    }
+
+    private void applyToImporter()
+    {
+        int applied = BuildContext.getInstance(project).applyToImporter();
+
+        MavenPrimeNotifications.info(
+            project,
+            (applied == 0)
+                ? MavenPrimeBundle.message("mavenprime.context.applyToImporter.cleared")
+                : MavenPrimeBundle.message(
+                    "mavenprime.context.applyToImporter.done", Integer.valueOf(applied)));
     }
 
     private void configureTree()

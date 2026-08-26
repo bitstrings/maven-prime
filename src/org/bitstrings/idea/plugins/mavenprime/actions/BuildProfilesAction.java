@@ -1,6 +1,7 @@
 package org.bitstrings.idea.plugins.mavenprime.actions;
 
 import java.awt.Component;
+import java.awt.Dimension;
 
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
@@ -56,7 +57,10 @@ public final class BuildProfilesAction
 
         showFor(popup, event);
 
-        subscribeWhileVisible(project, popup, profiles);
+        if (subscribeWhileVisible(project, popup, profiles))
+        {
+            growToFit(popup, profiles);
+        }
     }
 
     static void showFor(JBPopup popup, AnActionEvent event)
@@ -87,9 +91,39 @@ public final class BuildProfilesAction
             .connect(popup)
             .subscribe(
                 BuildContext.TOPIC,
-                (BuildContext.BuildContextListener) () -> reload(project, profiles));
+                (BuildContext.BuildContextListener) () -> refit(project, popup, profiles));
 
         return true;
+    }
+
+    static void refit(Project project, JBPopup popup, ProfileListPanel profiles)
+    {
+        reload(project, profiles);
+
+        growToFit(popup, profiles);
+    }
+
+    // The remembered size is a floor: a list that outgrew it still fits, a shorter one keeps it.
+    static void growToFit(JBPopup popup, ProfileListPanel profiles)
+    {
+        if (!popup.isVisible())
+        {
+            return;
+        }
+
+        Dimension fitted = fitted(popup.getSize(), profiles.getSize(), profiles.getPreferredSize());
+
+        if (!fitted.equals(popup.getSize()))
+        {
+            popup.setSize(fitted);
+        }
+    }
+
+    static Dimension fitted(Dimension popup, Dimension actual, Dimension wanted)
+    {
+        return new Dimension(
+            popup.width + Math.max(0, wanted.width - actual.width),
+            popup.height + Math.max(0, wanted.height - actual.height));
     }
 
     @Override

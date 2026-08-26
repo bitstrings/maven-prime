@@ -139,6 +139,37 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.1.2</b>
+      <ul>
+        <li>
+          <b>Build context</b>: a property marked <b>Apply to the IDE Maven import</b> no longer reaches the
+          importer on its own. <b>Apply to the IDE Maven Import</b> on the Build Context properties toolbar
+          writes the marked properties, and takes back exactly what it wrote, so whatever you typed into the
+          importer VM options yourself stays there.
+        </li>
+        <li>
+          The two markers an earlier version fenced its region with reached the importer JVM as real
+          <code>-D</code> definitions. They are taken out of the field the first time this version reads it.
+        </li>
+        <li>
+          <b>Profiles</b>: a profile that a module brings in, or takes away, appears and disappears as soon
+          as the import finishes, in the profiles popup as well as in the tool window.
+        </li>
+        <li>
+          The profiles popup keeps the size you drag it to and treats it as a minimum: a longer name or one
+          more row widens it, a shorter list leaves it as it is.
+        </li>
+        <li>A finished import no longer pushes the profiles back into the IDE and starts a second one.</li>
+      </ul>
+
+      <b>1.1.1</b>
+      <ul>
+        <li>
+          <b>Profiler</b>: the timeline no longer paints its bars over the rest of the tool window on builds
+          with more modules running at once than fit on screen, or at any zoom past the whole build.
+        </li>
+      </ul>
+
       <b>1.1.0</b>
       <ul>
         <li>

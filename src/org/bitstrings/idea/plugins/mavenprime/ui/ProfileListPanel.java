@@ -81,6 +81,9 @@ public final class ProfileListPanel
             Math.min(Math.max(root.getChildCount(), MIN_VISIBLE_ROWS), MAX_VISIBLE_ROWS));
 
         selectProfile(wasSelected);
+
+        revalidate();
+        repaint();
     }
 
     private String selectedProfileName()

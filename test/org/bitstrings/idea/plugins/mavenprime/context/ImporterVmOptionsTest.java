@@ -13,123 +13,161 @@ public class ImporterVmOptionsTest
 {
     private static final String USER_OPTIONS = "-Xmx4g -Dhttps.proxyHost=proxy.corp";
 
-    @Test
-    public void merge_noExistingOptions_writesOnlyTheManagedRegion()
-    {
-        String merged = ImporterVmOptions.merge("", List.of(BuildContextProperty.of("env", "ci", true)));
+    private static final String NOTHING = "";
 
+    @Test
+    public void rendered_aPropertyMarkedForImport_isDefinedOnItsOwn()
+    {
+        assertEquals("-Denv=ci", ImporterVmOptions.rendered(List.of(BuildContextProperty.of("env", "ci", true))));
+    }
+
+    @Test
+    public void rendered_aPropertyExcludedFromImport_isNotWritten()
+    {
         assertEquals(
-            ImporterVmOptions.BEGIN + " -Denv=ci " + ImporterVmOptions.END, merged);
-    }
-
-    @Test
-    public void merge_userOptionsPresent_keepsThemVerbatim()
-    {
-        String merged =
-            ImporterVmOptions.merge(USER_OPTIONS, List.of(BuildContextProperty.of("env", "ci", true)));
-
-        assertTrue(merged, merged.startsWith(USER_OPTIONS + ' '));
-    }
-
-    @Test
-    public void merge_appliedTwice_leavesASingleRegion()
-    {
-        List<BuildContextProperty> properties = List.of(BuildContextProperty.of("env", "ci", true));
-
-        String once = ImporterVmOptions.merge(USER_OPTIONS, properties);
-
-        assertEquals(once, ImporterVmOptions.merge(once, properties));
-    }
-
-    @Test
-    public void merge_propertyExcludedFromImport_isNotWritten()
-    {
-        String merged =
-            ImporterVmOptions.merge(
-                "",
+            "-Denv=ci",
+            ImporterVmOptions.rendered(
                 List.of(
                     BuildContextProperty.of("env", "ci", true),
-                    BuildContextProperty.of("skipTests", "true", false)));
-
-        assertEquals(ImporterVmOptions.BEGIN + " -Denv=ci " + ImporterVmOptions.END, merged);
+                    BuildContextProperty.of("skipTests", "true", false))));
     }
 
     @Test
-    public void merge_valueContainingASpace_survivesReparsing()
+    public void rendered_aValuelessProperty_rendersABareDefinition()
     {
-        String merged =
-            ImporterVmOptions.merge("", List.of(BuildContextProperty.of("banner", "hello world", true)));
-
-        assertTrue(merged, ParametersListUtil.parse(merged).contains("-Dbanner=hello world"));
+        assertEquals(
+            "-Dquickstart",
+            ImporterVmOptions.rendered(List.of(BuildContextProperty.of("quickstart", "", true))));
     }
 
     @Test
-    public void merge_valueContainingADoubleQuote_survivesReparsing()
+    public void rendered_aBlankKey_isSkipped()
     {
-        String merged =
-            ImporterVmOptions.merge("", List.of(BuildContextProperty.of("banner", "say \"hi\"", true)));
-
-        assertTrue(merged, ParametersListUtil.parse(merged).contains("-Dbanner=say \"hi\""));
+        assertEquals(NOTHING, ImporterVmOptions.rendered(List.of(BuildContextProperty.of("  ", "value", true))));
     }
 
     @Test
-    public void merge_valuelessProperty_rendersABareDefinition()
+    public void rendered_aValueContainingASpace_survivesReparsing()
     {
-        String merged = ImporterVmOptions.merge("", List.of(BuildContextProperty.of("quickstart", "", true)));
+        String region = ImporterVmOptions.rendered(List.of(BuildContextProperty.of("banner", "hello world", true)));
 
-        assertEquals(ImporterVmOptions.BEGIN + " -Dquickstart " + ImporterVmOptions.END, merged);
+        assertTrue(region, ParametersListUtil.parse(region).contains("-Dbanner=hello world"));
     }
 
     @Test
-    public void merge_lastImportPropertyRemoved_dropsTheRegionAndKeepsUserOptions()
+    public void rendered_aValueContainingADoubleQuote_survivesReparsing()
     {
-        String existing = ImporterVmOptions.merge(USER_OPTIONS, List.of(BuildContextProperty.of("env", "ci", true)));
+        String region = ImporterVmOptions.rendered(List.of(BuildContextProperty.of("banner", "say \"hi\"", true)));
 
-        assertEquals(USER_OPTIONS, ImporterVmOptions.merge(existing, List.of()));
+        assertTrue(region, ParametersListUtil.parse(region).contains("-Dbanner=say \"hi\""));
     }
 
     @Test
-    public void merge_blankKey_isSkipped()
-    {
-        assertEquals("", ImporterVmOptions.merge("", List.of(BuildContextProperty.of("  ", "value", true))));
-    }
-
-    @Test
-    public void merge_aKeyDeclaredTwice_definesTheValueTheContextReportsForIt()
+    public void rendered_aKeyDeclaredTwice_definesTheValueTheContextReportsForIt()
     {
         List<BuildContextProperty> properties =
             List.of(
                 BuildContextProperty.of("revision", "1.0.0", true),
                 BuildContextProperty.of("revision", "2.0.0", true));
 
-        String merged = ImporterVmOptions.merge("", properties);
-
         assertEquals(
             "the importer JVM keeps the last -D, so no reader of the same rows may report an earlier one",
             ContextLayers.valueOf(properties, "revision"),
-            lastDefinitionOf(merged, "revision"));
+            lastDefinitionOf(ImporterVmOptions.rendered(properties), "revision"));
     }
 
     @Test
-    public void strip_noManagedRegion_returnsTheInputTrimmed()
+    public void merge_nothingWrittenBeforeAndNothingToWrite_leavesTheFieldByteForByte()
     {
-        assertEquals(USER_OPTIONS, ImporterVmOptions.strip("  " + USER_OPTIONS + "  "));
+        String untidy = "  -Xmx4g   -Xms1g  ";
+
+        assertEquals(untidy, ImporterVmOptions.merge(untidy, NOTHING, NOTHING));
     }
 
     @Test
-    public void strip_userOptionsOnBothSidesOfTheRegion_keepsBoth()
+    public void merge_userOptionsPresent_keepsThemAndAppendsTheRegion()
     {
-        String existing = "-Xmx4g " + ImporterVmOptions.BEGIN + " -Denv=ci " + ImporterVmOptions.END + " -Xms1g";
-
-        assertEquals("-Xmx4g -Xms1g", ImporterVmOptions.strip(existing));
+        assertEquals(
+            USER_OPTIONS + " -Denv=ci", ImporterVmOptions.merge(USER_OPTIONS, NOTHING, "-Denv=ci"));
     }
 
-    private static String lastDefinitionOf(String merged, String key)
+    @Test
+    public void merge_appliedTwice_leavesASingleRegion()
+    {
+        String once = ImporterVmOptions.merge(USER_OPTIONS, NOTHING, "-Denv=ci");
+
+        assertEquals(once, ImporterVmOptions.merge(once, "-Denv=ci", "-Denv=ci"));
+    }
+
+    @Test
+    public void merge_nothingLeftToWrite_removesWhatWeWroteAndKeepsTheRest()
+    {
+        String existing = ImporterVmOptions.merge(USER_OPTIONS, NOTHING, "-Denv=ci");
+
+        assertEquals(USER_OPTIONS, ImporterVmOptions.merge(existing, "-Denv=ci", NOTHING));
+    }
+
+    @Test
+    public void merge_theUserEditedWhatWeWrote_removesNothingAtAll()
+    {
+        String edited = USER_OPTIONS + " -Denv=staging";
+
+        assertEquals(
+            "a field that no longer matches what we wrote is the user's, and removing from it is guesswork",
+            edited + " -Denv=ci",
+            ImporterVmOptions.merge(edited, "-Denv=ci", "-Denv=ci"));
+    }
+
+    @Test
+    public void merge_theUserAddedOptionsAroundOurs_keepsEveryOneOfThem()
+    {
+        String existing = "-Xmx4g -Denv=ci -Xms1g";
+
+        assertEquals(
+            "-Xmx4g -Xms1g -Denv=qa", ImporterVmOptions.merge(existing, "-Denv=ci", "-Denv=qa"));
+    }
+
+    @Test
+    public void merge_ourRegionAlreadyGone_addsTheNewOneWithoutTouchingTheRest()
+    {
+        assertEquals(
+            USER_OPTIONS + " -Denv=ci", ImporterVmOptions.merge(USER_OPTIONS, "-Denv=gone", "-Denv=ci"));
+    }
+
+    @Test
+    public void stripLegacy_aFieldWithoutMarkers_isReturnedUntouched()
+    {
+        String untidy = "  -Xmx4g   -Xms1g  ";
+
+        assertEquals(untidy, ImporterVmOptions.stripLegacy(untidy));
+    }
+
+    @Test
+    public void stripLegacy_aFencedRegion_removesTheMarkersAndTheirContent()
+    {
+        String existing =
+            "-Xmx4g " + ImporterVmOptions.LEGACY_BEGIN + " -Denv=ci " + ImporterVmOptions.LEGACY_END + " -Xms1g";
+
+        assertEquals("-Xmx4g -Xms1g", ImporterVmOptions.stripLegacy(existing));
+    }
+
+    @Test
+    public void stripLegacy_anOpeningMarkerWithNoClose_removesOnlyTheMarker()
+    {
+        String existing = "-Xmx4g " + ImporterVmOptions.LEGACY_BEGIN + " -Denv=ci -Xms1g";
+
+        assertEquals(
+            "everything after a dangling marker was the user's, and cleaning up is no licence to delete it",
+            "-Xmx4g -Denv=ci -Xms1g",
+            ImporterVmOptions.stripLegacy(existing));
+    }
+
+    private static String lastDefinitionOf(String rendered, String key)
     {
         String prefix = "-D" + key + '=';
         String value = null;
 
-        for (String argument : ParametersListUtil.parse(merged))
+        for (String argument : ParametersListUtil.parse(rendered))
         {
             if (argument.startsWith(prefix))
             {

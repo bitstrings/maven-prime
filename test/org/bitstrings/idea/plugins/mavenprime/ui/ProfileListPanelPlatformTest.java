@@ -23,6 +23,67 @@ public class ProfileListPanelPlatformTest
 
     private static final int MANY = 60;
 
+    private static final String LONG_PROFILE = "a-profile-named-at-considerably-greater-length";
+
+    public void testSetProfiles_aLongerNameArriving_asksForTheWidthItNeeds()
+    {
+        ProfileListPanel panel = new ProfileListPanel();
+
+        panel.setProfiles(List.of(PROFILE), Map.of());
+
+        int narrow = panel.getPreferredSize().width;
+
+        panel.setProfiles(List.of(PROFILE, LONG_PROFILE), Map.of());
+
+        assertTrue(
+            "a profile can bring more profiles with it, and a width fixed by the old list clips the "
+                + "names the new one added: " + narrow + " vs " + panel.getPreferredSize().width,
+            panel.getPreferredSize().width > narrow);
+    }
+
+    public void testSetProfiles_aShorterListArriving_asksForLessWidth()
+    {
+        ProfileListPanel panel = new ProfileListPanel();
+
+        panel.setProfiles(List.of(PROFILE, LONG_PROFILE), Map.of());
+
+        int wide = panel.getPreferredSize().width;
+
+        panel.setProfiles(List.of(PROFILE), Map.of());
+
+        assertTrue(
+            "a popup that only ever grows ends up mostly empty space",
+            panel.getPreferredSize().width < wide);
+    }
+
+    public void testSetProfiles_moreProfilesThanFitOnScreen_stopsGrowingTaller()
+    {
+        ProfileListPanel panel = new ProfileListPanel();
+
+        panel.setProfiles(namesOf(MANY), Map.of());
+
+        int capped = panel.getPreferredSize().height;
+
+        panel.setProfiles(namesOf(MANY * 2), Map.of());
+
+        assertEquals(
+            "an uncapped height runs the popup off the screen instead of scrolling",
+            capped,
+            panel.getPreferredSize().height);
+    }
+
+    private static List<String> namesOf(int count)
+    {
+        List<String> names = new ArrayList<>(count);
+
+        for (int index = 0; index < count; index++)
+        {
+            names.add(PROFILE + index);
+        }
+
+        return names;
+    }
+
     public void testGetSelectedProfiles_aProfileNobodyHasTouched_leavesItOutSoMavenDecides()
     {
         ProfileListPanel panel = new ProfileListPanel();

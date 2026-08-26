@@ -1,5 +1,7 @@
 package org.bitstrings.idea.plugins.mavenprime.actions;
 
+import java.awt.Dimension;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,38 @@ public class BuildProfilesActionPlatformTest
         {
             super.tearDown();
         }
+    }
+
+    private static final Dimension REMEMBERED = new Dimension(300, 400);
+
+    public void testFitted_aListThatFitsTheRememberedSize_leavesItExactlyAsItWas()
+    {
+        assertEquals(
+            "a size the user dragged to is theirs, and content that fits has no claim on it",
+            REMEMBERED,
+            BuildProfilesAction.fitted(REMEMBERED, new Dimension(280, 380), new Dimension(200, 100)));
+    }
+
+    public void testFitted_aNameWiderThanTheRememberedSize_growsByExactlyTheShortfall()
+    {
+        assertEquals(
+            new Dimension(REMEMBERED.width + 40, REMEMBERED.height),
+            BuildProfilesAction.fitted(REMEMBERED, new Dimension(280, 380), new Dimension(320, 100)));
+    }
+
+    public void testFitted_moreRowsThanTheRememberedSizeShows_growsTallerByTheShortfall()
+    {
+        assertEquals(
+            new Dimension(REMEMBERED.width, REMEMBERED.height + 25),
+            BuildProfilesAction.fitted(REMEMBERED, new Dimension(280, 380), new Dimension(200, 405)));
+    }
+
+    public void testFitted_aShorterListThanBefore_neverShrinksBelowWhatWasRemembered()
+    {
+        assertEquals(
+            "shrinking to the content throws away the size the user chose",
+            REMEMBERED,
+            BuildProfilesAction.fitted(REMEMBERED, new Dimension(280, 380), new Dimension(10, 10)));
     }
 
     public void testUpdate_aProjectMavenNeverTookOver_disablesTheActionAsWellAsHidingIt()

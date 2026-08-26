@@ -1,5 +1,7 @@
 package org.bitstrings.idea.plugins.mavenprime.settings;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
@@ -24,6 +26,8 @@ public final class MavenPrimeSettings
     public boolean sharedContext = true;
 
     public boolean searchEverywhere;
+
+    public String importerVmOptions = StringUtils.EMPTY;
 
     public interface SettingsListener
     {

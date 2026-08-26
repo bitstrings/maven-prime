@@ -10,52 +10,82 @@ import com.intellij.util.execution.ParametersListUtil;
 
 public final class ImporterVmOptions
 {
-    static final String BEGIN = "-Dmavenprime.managed.begin";
+    static final String LEGACY_BEGIN = "-Dmavenprime.managed.begin";
 
-    static final String END = "-Dmavenprime.managed.end";
+    static final String LEGACY_END = "-Dmavenprime.managed.end";
 
     private ImporterVmOptions()
     {
     }
 
-    public static String merge(String existing, List<BuildContextProperty> properties)
+    public static String rendered(List<BuildContextProperty> properties)
     {
-        String preserved = strip(existing);
-
-        List<String> region = render(properties);
-
-        if (region.isEmpty())
-        {
-            return preserved;
-        }
-
-        region.add(0, BEGIN);
-        region.add(END);
-
-        String encoded = ParametersListUtil.join(region);
-
-        return preserved.isEmpty() ? encoded : (preserved + ' ' + encoded);
+        return ParametersListUtil.join(render(properties));
     }
 
-    public static String strip(String existing)
+    // Removal matches the tokens last written and nothing else, so an edited field is left as it is.
+    public static String merge(String existing, String written, String region)
+    {
+        if (StringUtils.isEmpty(written) && StringUtils.isEmpty(region))
+        {
+            return StringUtils.defaultString(existing);
+        }
+
+        List<String> tokens = new ArrayList<>(ParametersListUtil.parse(StringUtils.defaultString(existing)));
+
+        remove(tokens, ParametersListUtil.parse(StringUtils.defaultString(written)));
+
+        tokens.addAll(ParametersListUtil.parse(StringUtils.defaultString(region)));
+
+        return ParametersListUtil.join(tokens);
+    }
+
+    public static String stripLegacy(String existing)
     {
         String text = StringUtils.defaultString(existing);
 
-        int begin = text.indexOf(BEGIN);
+        List<String> tokens = new ArrayList<>(ParametersListUtil.parse(text));
+
+        int begin = tokens.indexOf(LEGACY_BEGIN);
 
         if (begin < 0)
         {
-            return text.trim();
+            return text;
         }
 
-        int end = text.indexOf(END, begin);
+        int end = tokens.indexOf(LEGACY_END);
 
-        if (end < 0)
+        tokens.subList(begin, ((end < begin) ? begin : end) + 1).clear();
+
+        return ParametersListUtil.join(tokens);
+    }
+
+    private static void remove(List<String> tokens, List<String> written)
+    {
+        int at = indexOf(tokens, written);
+
+        if (at >= 0)
         {
-            return text.substring(0, begin).trim();
+            tokens.subList(at, at + written.size()).clear();
+        }
+    }
+
+    private static int indexOf(List<String> tokens, List<String> written)
+    {
+        if (written.isEmpty())
+        {
+            return -1;
         }
 
-        return (text.substring(0, begin).trim() + ' ' + text.substring(end + END.length()).trim()).trim();
+        for (int start = 0; start <= (tokens.size() - written.size()); start++)
+        {
+            if (tokens.subList(start, start + written.size()).equals(written))
+            {
+                return start;
+            }
+        }
+
+        return -1;
     }
 
     private static List<String> render(List<BuildContextProperty> properties)
