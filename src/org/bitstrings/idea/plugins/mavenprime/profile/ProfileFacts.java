@@ -23,7 +23,9 @@ public final class ProfileFacts
         facts.add(new Fact(Measure.WORK, summary.totalWorkMillis()));
         facts.add(new Fact(Measure.CRITICAL_PATH, summary.criticalPathMillis()));
 
-        if (summary.recoverableMillis() > 0L)
+        // Below the scheduling overhead the gap is the graph, not the thread count, and the two rows
+        // would carry one number under labels that contradict each other.
+        if (summary.recoverableMillis() > summary.schedulingLossMillis())
         {
             facts.add(new Fact(Measure.RECOVERABLE, summary.recoverableMillis()));
         }

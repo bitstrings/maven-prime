@@ -25,7 +25,24 @@ public class ProfileFactsTest
     {
         assertFalse(
             "offering recoverable time on a dependency-bound build tells the reader to chase nothing",
-            measuresOf(summarize()).contains(Measure.RECOVERABLE));
+            measuresOf(dependencyBound()).contains(Measure.RECOVERABLE));
+    }
+
+    @Test
+    public void of_aBuildNoThreadCountCanImprove_stillReportsWhatWentOnSchedulingIt()
+    {
+        assertTrue(
+            "the gap above the critical path is real, and dropping both rows hides it entirely",
+            measuresOf(dependencyBound()).contains(Measure.SCHEDULING_LOSS));
+    }
+
+    @Test
+    public void of_aBuildStarvedOfThreads_keepsTheTimeThreadsWouldRecover()
+    {
+        assertTrue(
+            "raising the thread count is the whole fix for a starved build, so the row it acts on "
+                + "must survive",
+            measuresOf(threadStarved()).contains(Measure.RECOVERABLE));
     }
 
     @Test
@@ -72,6 +89,32 @@ public class ProfileFactsTest
         BuildProfile profile = new BuildProfile();
 
         profile.accept(new ModuleTiming("g:a", 0L, 100L));
+
+        return profile.summarize();
+    }
+
+    // A chain longer than the work spread over the lanes it ran in, started late enough to leave a gap.
+    private static BuildProfileSummary dependencyBound()
+    {
+        BuildProfile profile = new BuildProfile();
+
+        profile.accept(new ModuleTiming("g:a", 0L, 100L));
+        profile.accept(new ModuleTiming("g:b", 120L, 100L));
+        profile.accept(new ModuleTiming("g:c", 0L, 10L));
+        profile.accept(new ProfileEvent.ReactorEdge("g:b", "g:a"));
+
+        return profile.summarize();
+    }
+
+    // Four independent modules that only ever filled two lanes.
+    private static BuildProfileSummary threadStarved()
+    {
+        BuildProfile profile = new BuildProfile();
+
+        profile.accept(new ModuleTiming("g:a", 0L, 100L));
+        profile.accept(new ModuleTiming("g:b", 0L, 100L));
+        profile.accept(new ModuleTiming("g:c", 100L, 100L));
+        profile.accept(new ModuleTiming("g:d", 100L, 100L));
 
         return profile.summarize();
     }
