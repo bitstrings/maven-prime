@@ -1,5 +1,7 @@
 package org.bitstrings.idea.plugins.mavenprime.editor;
 
+import java.util.Map;
+
 import org.bitstrings.idea.plugins.mavenprime.editor.EffectiveModelHints.Hint;
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
@@ -169,6 +171,39 @@ public class EffectiveModelHintsPlatformTest
             "omitting the groupId of an Apache plugin is the normal form in a pom, not an edge case",
             hint);
         assertEquals(ProvenanceFixture.PARENT, hint.origin());
+    }
+
+    public void testPropertyValue_theIdeResolvingItDifferentlyFromTheRecordedRun_showsWhatTheIdeResolved()
+    {
+        Hint hint =
+            ProvenanceFixture
+                .hintsFor(getProject(), Map.of("revision", "9.9.9"), Map.of())
+                .propertyValue("${revision}");
+
+        assertNotNull(hint);
+        assertEquals(
+            "the IDE re-resolves on every import while a recorded run is fixed at the moment it ran, "
+                + "so showing the recording renders a value the poms no longer produce",
+            "9.9.9",
+            hint.text());
+        assertEquals(
+            "only the recording knows which pom declared it, so that part still comes from there",
+            ProvenanceFixture.PARENT,
+            hint.origin());
+    }
+
+    public void testManagedVersion_theIdeResolvingItDifferentlyFromTheRecordedRun_showsWhatTheIdeResolved()
+    {
+        Hint hint =
+            ProvenanceFixture
+                .hintsFor(
+                    getProject(),
+                    Map.of(),
+                    Map.of("org.apache.commons:commons-lang3", "3.99.0"))
+                .managedVersion("org.apache.commons", "commons-lang3", "", "");
+
+        assertNotNull(hint);
+        assertEquals("3.99.0", hint.text());
     }
 
     private EffectiveModelHints hints()

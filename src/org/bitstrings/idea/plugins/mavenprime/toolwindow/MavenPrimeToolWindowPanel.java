@@ -27,6 +27,7 @@ import org.bitstrings.idea.plugins.mavenprime.execution.MavenPrimeRequest;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalDefinition;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalRegistry;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalScope;
+import org.bitstrings.idea.plugins.mavenprime.model.ModelStaleness;
 import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
 import org.bitstrings.idea.plugins.mavenprime.ui.CommandAction;
 import org.bitstrings.idea.plugins.mavenprime.ui.GoalEditorDialog;
@@ -248,6 +249,13 @@ public final class MavenPrimeToolWindowPanel
                 RepositoryInspection.TOPIC,
                 (RepositoryInspection.InspectionListener) coordinates ->
                     tabs.select(tabInfoOf(ToolWindowTab.REPOSITORY), true));
+
+        project
+            .getMessageBus()
+            .connect(this)
+            .subscribe(
+                ModelStaleness.TOPIC,
+                (ModelStaleness.StalenessListener) this::updateStaleMarker);
 
         MavenImports.onImported(project, this, this::reload);
     }
@@ -538,6 +546,8 @@ public final class MavenPrimeToolWindowPanel
             },
             this);
 
+        updateStaleMarker();
+
         return tabs.getComponent();
     }
 
@@ -550,8 +560,20 @@ public final class MavenPrimeToolWindowPanel
         applyTabs(visible, visible.contains(persisted) ? persisted : visible.get(0));
     }
 
+    void updateStaleMarker()
+    {
+        boolean pending = ModelStaleness.getInstance(project).isStale();
+
+        TabInfo model = tabInfoOf(ToolWindowTab.MODEL);
+
+        model.setIcon(pending ? AllIcons.General.Modified : null);
+        model.setTooltipText(pending ? MavenPrimeBundle.message("mavenprime.model.stale") : null);
+    }
+
     private void refreshTabs()
     {
+        updateStaleMarker();
+
         List<ToolWindowTab> visible = visibleTabs();
 
         ToolWindowTab current = selectedTab();

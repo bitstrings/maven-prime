@@ -5,6 +5,7 @@ import java.util.List;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent.DependencyOrigin;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent.PluginOrigin;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent.PropertyOrigin;
+import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildCompleteness;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory.BuildEntry;
@@ -20,13 +21,22 @@ public final class ProvenanceLog
     public static final Topic<ProvenanceListener> TOPIC =
         Topic.create("Maven Prime model provenance", ProvenanceListener.class);
 
+    public static final Topic<ProvenanceReadListener> READ_TOPIC =
+        Topic.create("Maven Prime model provenance read", ProvenanceReadListener.class);
+
     private final Project project;
 
-    private final BuildHistory<ProvenanceData> history = new BuildHistory<>(ProvenanceData::new);
+    private final BuildHistory<ProvenanceData> history =
+        new BuildHistory<>(ProvenanceData::new, this::retainedBuilds);
 
     public ProvenanceLog(Project project)
     {
         this.project = project;
+    }
+
+    private int retainedBuilds()
+    {
+        return MavenPrimeSettings.getInstance(project).retainedBuilds;
     }
 
     public static ProvenanceLog getInstance(Project project)
@@ -58,12 +68,14 @@ public final class ProvenanceLog
         if (history.select(entry))
         {
             publish();
+            publishRead();
         }
     }
 
     public void buildFinished()
     {
         publish();
+        publishRead();
     }
 
     public BuildCompleteness getCompleteness()
@@ -96,8 +108,18 @@ public final class ProvenanceLog
         UiTopics.publish(project, TOPIC, ProvenanceListener::provenanceUpdated);
     }
 
+    private void publishRead()
+    {
+        UiTopics.publish(project, READ_TOPIC, ProvenanceReadListener::provenanceRead);
+    }
+
     public interface ProvenanceListener
     {
         void provenanceUpdated();
+    }
+
+    public interface ProvenanceReadListener
+    {
+        void provenanceRead();
     }
 }

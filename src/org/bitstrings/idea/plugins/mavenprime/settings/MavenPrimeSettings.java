@@ -1,6 +1,7 @@
 package org.bitstrings.idea.plugins.mavenprime.settings;
 
 import org.apache.commons.lang3.StringUtils;
+import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory;
 
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.Service;
@@ -28,6 +29,8 @@ public final class MavenPrimeSettings
     public boolean searchEverywhere;
 
     public boolean profileNotifications;
+
+    public int retainedBuilds = BuildHistory.DEFAULT_RETAINED;
 
     public String importerVmOptions = StringUtils.EMPTY;
 

@@ -14,11 +14,13 @@ import org.bitstrings.idea.plugins.mavenprime.goals.GoalDefinition;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalRegistry;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalScope;
 import org.bitstrings.idea.plugins.mavenprime.ui.HintLabel;
+import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory;
 import org.bitstrings.idea.plugins.mavenprime.util.UiTopics;
 
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.IdeBorderFactory;
+import com.intellij.ui.JBIntSpinner;
 import com.intellij.ui.components.ActionLink;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBTabbedPane;
@@ -27,6 +29,10 @@ import com.intellij.util.ui.FormBuilder;
 public final class MavenPrimeConfigurable
     implements Configurable
 {
+    private static final int MIN_RETAINED = 1;
+
+    private static final int MAX_RETAINED = 100;
+
     private final Project project;
 
     private GoalTablePanel globalPanel;
@@ -40,6 +46,8 @@ public final class MavenPrimeConfigurable
     private JBCheckBox sharedContextBox;
 
     private JBCheckBox profileNotificationsBox;
+
+    private JBIntSpinner retainedBuildsSpinner;
 
     public MavenPrimeConfigurable(Project project)
     {
@@ -80,6 +88,8 @@ public final class MavenPrimeConfigurable
                 MavenPrimeBundle.message("mavenprime.sharedContext", MavenPrimeConfigService.FILE_NAME));
         profileNotificationsBox =
             new JBCheckBox(MavenPrimeBundle.message("mavenprime.profileNotifications"));
+        retainedBuildsSpinner =
+            new JBIntSpinner(BuildHistory.DEFAULT_RETAINED, MIN_RETAINED, MAX_RETAINED);
 
         JPanel header =
             FormBuilder
@@ -97,6 +107,9 @@ public final class MavenPrimeConfigurable
                 .addComponent(profileNotificationsBox)
                 .addComponent(
                     HintLabel.under(profileNotificationsBox, "mavenprime.profileNotifications.hint"))
+                .addLabeledComponent(
+                    MavenPrimeBundle.message("mavenprime.retainedBuilds"), retainedBuildsSpinner)
+                .addComponent(HintLabel.forKey("mavenprime.retainedBuilds.hint"))
                 .getPanel();
 
         JPanel panel = new JPanel(new BorderLayout());
@@ -145,7 +158,8 @@ public final class MavenPrimeConfigurable
             || (autoRefreshBox.isSelected() != settings().autoRefresh)
             || (colorConsoleBox.isSelected() != settings().colorConsole)
             || (sharedContextBox.isSelected() != settings().sharedContext)
-            || (profileNotificationsBox.isSelected() != settings().profileNotifications);
+            || (profileNotificationsBox.isSelected() != settings().profileNotifications)
+            || (retainedBuildsSpinner.getNumber() != settings().retainedBuilds);
     }
 
     @Override
@@ -174,6 +188,7 @@ public final class MavenPrimeConfigurable
         settings().colorConsole = colorConsoleBox.isSelected();
         settings().sharedContext = sharedContextBox.isSelected();
         settings().profileNotifications = profileNotificationsBox.isSelected();
+        settings().retainedBuilds = retainedBuildsSpinner.getNumber();
 
         if (sharedContextChanged)
         {
@@ -201,6 +216,7 @@ public final class MavenPrimeConfigurable
         colorConsoleBox.setSelected(settings().colorConsole);
         sharedContextBox.setSelected(settings().sharedContext);
         profileNotificationsBox.setSelected(settings().profileNotifications);
+        retainedBuildsSpinner.setNumber(settings().retainedBuilds);
     }
 
     private boolean isShowing()
@@ -210,7 +226,8 @@ public final class MavenPrimeConfigurable
             && (autoRefreshBox != null)
             && (colorConsoleBox != null)
             && (sharedContextBox != null)
-            && (profileNotificationsBox != null);
+            && (profileNotificationsBox != null)
+            && (retainedBuildsSpinner != null);
     }
 
     @Override
@@ -222,6 +239,7 @@ public final class MavenPrimeConfigurable
         colorConsoleBox = null;
         sharedContextBox = null;
         profileNotificationsBox = null;
+        retainedBuildsSpinner = null;
     }
 
     private MavenPrimeSettings settings()

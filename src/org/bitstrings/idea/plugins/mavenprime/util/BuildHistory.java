@@ -2,13 +2,14 @@ package org.bitstrings.idea.plugins.mavenprime.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 
 public final class BuildHistory<T>
 {
-    public static final int MAX_RETAINED = 20;
+    public static final int DEFAULT_RETAINED = 20;
 
     private final Object lock = new Object();
 
@@ -16,18 +17,28 @@ public final class BuildHistory<T>
 
     private final Supplier<T> empty;
 
+    private final IntSupplier retained;
+
     private int selected = -1;
 
     public BuildHistory(Supplier<T> empty)
     {
+        this(empty, () -> DEFAULT_RETAINED);
+    }
+
+    public BuildHistory(Supplier<T> empty, IntSupplier retained)
+    {
         this.empty = empty;
+        this.retained = retained;
     }
 
     public T start(String name, T data)
     {
         synchronized (lock)
         {
-            if (entries.size() >= MAX_RETAINED)
+            int keep = Math.max(1, retained.getAsInt());
+
+            while (entries.size() >= keep)
             {
                 entries.remove(0);
             }

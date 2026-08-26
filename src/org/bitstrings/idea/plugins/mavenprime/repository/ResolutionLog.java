@@ -3,6 +3,7 @@ package org.bitstrings.idea.plugins.mavenprime.repository;
 import java.util.List;
 
 import org.bitstrings.idea.plugins.mavenprime.repository.ResolutionEvent.ArtifactDownloading;
+import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildCompleteness;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory.BuildEntry;
@@ -20,11 +21,17 @@ public final class ResolutionLog
 
     private final Project project;
 
-    private final BuildHistory<ResolutionData> history = new BuildHistory<>(ResolutionData::new);
+    private final BuildHistory<ResolutionData> history =
+        new BuildHistory<>(ResolutionData::new, this::retainedBuilds);
 
     public ResolutionLog(Project project)
     {
         this.project = project;
+    }
+
+    private int retainedBuilds()
+    {
+        return MavenPrimeSettings.getInstance(project).retainedBuilds;
     }
 
     public static ResolutionLog getInstance(Project project)

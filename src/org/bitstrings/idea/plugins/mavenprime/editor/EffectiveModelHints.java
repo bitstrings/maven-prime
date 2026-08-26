@@ -48,7 +48,7 @@ public final class EffectiveModelHints
 
             PropertyOrigin declared = model.propertyOf(facts.moduleKey(), name);
 
-            String value = (declared == null) ? facts.expression(name) : declared.value();
+            String value = StringUtils.defaultIfBlank(facts.expression(name), valueOf(declared));
 
             if (StringUtils.isBlank(value))
             {
@@ -83,14 +83,10 @@ public final class EffectiveModelHints
         DependencyOrigin declared =
             model.dependencyOf(facts.moduleKey(), managementKey(groupId, artifactId, type, classifier));
 
-        if ((declared != null) && StringUtils.isNotBlank(declared.value()))
-        {
-            return new Hint(declared.value(), declared.origin());
-        }
-
-        String resolved = facts.dependencyVersion(groupId, artifactId);
-
-        return StringUtils.isBlank(resolved) ? null : new Hint(resolved, ModelOrigin.UNKNOWN);
+        return hintOf(
+            facts.dependencyVersion(groupId, artifactId),
+            (declared == null) ? null : declared.value(),
+            (declared == null) ? ModelOrigin.UNKNOWN : declared.origin());
     }
 
     public Hint managedPluginVersion(String groupId, String artifactId)
@@ -102,14 +98,24 @@ public final class EffectiveModelHints
 
         PluginOrigin declared = model.pluginOf(facts.moduleKey(), pluginKey(groupId, artifactId));
 
-        if ((declared != null) && StringUtils.isNotBlank(declared.value()))
-        {
-            return new Hint(declared.value(), declared.origin());
-        }
+        return hintOf(
+            facts.pluginVersion(groupId, artifactId),
+            (declared == null) ? null : declared.value(),
+            (declared == null) ? ModelOrigin.UNKNOWN : declared.origin());
+    }
 
-        String resolved = facts.pluginVersion(groupId, artifactId);
+    // The IDE re-resolves its model on every import; a recorded run only says what a past one saw, so
+    // preferring the recording renders a value the reader can no longer reproduce from the poms.
+    private static Hint hintOf(String live, String recorded, ModelOrigin origin)
+    {
+        String value = StringUtils.defaultIfBlank(live, recorded);
 
-        return StringUtils.isBlank(resolved) ? null : new Hint(resolved, ModelOrigin.UNKNOWN);
+        return StringUtils.isBlank(value) ? null : new Hint(value, origin);
+    }
+
+    private static String valueOf(PropertyOrigin declared)
+    {
+        return (declared == null) ? null : declared.value();
     }
 
     static String managementKey(String groupId, String artifactId, String type, String classifier)

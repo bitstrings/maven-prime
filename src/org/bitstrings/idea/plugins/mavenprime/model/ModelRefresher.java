@@ -65,11 +65,16 @@ public final class ModelRefresher
 
     public void refreshUnread()
     {
-        if (MavenPrimeSettings.getInstance(project).autoRefresh
-            && ProvenanceLog.getInstance(project).getModules().isEmpty())
+        if (isModelUnread())
         {
             start();
         }
+    }
+
+    boolean isModelUnread()
+    {
+        return MavenPrimeSettings.getInstance(project).autoRefresh
+            && ProvenanceLog.getInstance(project).getBuilds().isEmpty();
     }
 
     private boolean start()

@@ -2,6 +2,7 @@ package org.bitstrings.idea.plugins.mavenprime.profile;
 
 import java.util.List;
 
+import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory.BuildEntry;
 import org.bitstrings.idea.plugins.mavenprime.util.UiTopics;
@@ -21,11 +22,17 @@ public final class BuildProfileService
 
     private final Project project;
 
-    private final BuildHistory<BuildProfile> history = new BuildHistory<>(BuildProfile::new);
+    private final BuildHistory<BuildProfile> history =
+        new BuildHistory<>(BuildProfile::new, this::retainedBuilds);
 
     public BuildProfileService(Project project)
     {
         this.project = project;
+    }
+
+    private int retainedBuilds()
+    {
+        return MavenPrimeSettings.getInstance(project).retainedBuilds;
     }
 
     public static BuildProfileService getInstance(Project project)

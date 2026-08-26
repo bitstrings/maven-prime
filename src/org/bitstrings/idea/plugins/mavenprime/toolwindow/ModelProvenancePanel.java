@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.model.ModelOrigin;
 import org.bitstrings.idea.plugins.mavenprime.model.ModelRefresher;
+import org.bitstrings.idea.plugins.mavenprime.model.ModelStaleness;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceData;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceLog;
@@ -40,6 +41,7 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.VerticalFlowLayout;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -95,6 +97,8 @@ public final class ModelProvenancePanel
 
     private final SimpleColoredComponent incomplete = new SimpleColoredComponent();
 
+    final SimpleColoredComponent stale = new SimpleColoredComponent();
+
     private final transient ListTreeTableModelOnColumns model;
 
     private final TreeTableView table;
@@ -133,6 +137,8 @@ public final class ModelProvenancePanel
 
         connection.subscribe(ProvenanceLog.TOPIC, (ProvenanceLog.ProvenanceListener) this::refresh);
         connection.subscribe(ModelRefresher.TOPIC, (ModelRefresher.RefreshListener) this::refresh);
+        connection.subscribe(
+            ModelStaleness.TOPIC, (ModelStaleness.StalenessListener) this::renderStale);
 
         refresh();
 
@@ -160,11 +166,17 @@ public final class ModelProvenancePanel
     private JComponent buildNorth()
     {
         incomplete.setBorder(JBUI.Borders.empty(0, 8, 4, 8));
+        stale.setBorder(JBUI.Borders.empty(0, 8, 4, 8));
+
+        JPanel banners = new JPanel(new VerticalFlowLayout(VerticalFlowLayout.TOP, 0, 0, true, false));
+
+        banners.add(stale);
+        banners.add(incomplete);
 
         JPanel north = new JPanel(new BorderLayout());
 
         north.add(buildToolbar(), BorderLayout.NORTH);
-        north.add(incomplete, BorderLayout.CENTER);
+        north.add(banners, BorderLayout.CENTER);
 
         return north;
     }
@@ -288,6 +300,23 @@ public final class ModelProvenancePanel
         return COLUMN_WIDTH_KEY + column;
     }
 
+    void renderStale()
+    {
+        boolean pending = ModelStaleness.getInstance(project).isStale();
+
+        stale.clear();
+        stale.setVisible(pending);
+
+        if (!pending)
+        {
+            return;
+        }
+
+        stale.setIcon(AllIcons.General.Warning);
+        stale.append(
+            MavenPrimeBundle.message("mavenprime.model.stale"), SimpleTextAttributes.REGULAR_ATTRIBUTES);
+    }
+
     public void refresh()
     {
         module = MavenProjects.moduleKeyOf(contextModule.get());
@@ -297,6 +326,8 @@ public final class ModelProvenancePanel
         ProvenanceLog log = ProvenanceLog.getInstance(project);
 
         CompletenessBanner.render(incomplete, log.getCompleteness());
+
+        renderStale();
 
         buildSelector.reload(log.getBuilds(), log.getSelectedBuild());
 

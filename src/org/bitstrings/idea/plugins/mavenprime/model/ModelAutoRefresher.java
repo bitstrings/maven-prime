@@ -2,6 +2,7 @@ package org.bitstrings.idea.plugins.mavenprime.model;
 
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
 import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
+import org.bitstrings.idea.plugins.mavenprime.util.MavenImports;
 import org.bitstrings.idea.plugins.mavenprime.util.MavenProjects;
 
 import com.intellij.openapi.components.Service;
@@ -26,10 +27,22 @@ public final class ModelAutoRefresher
     public void listen()
     {
         project.getMessageBus().connect(project).subscribe(BuildContext.MODEL_TOPIC, this);
+
+        MavenImports.onImported(project, project, this::pomSourcesChanged);
     }
 
     @Override
     public void buildModelChanged()
+    {
+        reread();
+    }
+
+    void pomSourcesChanged()
+    {
+        reread();
+    }
+
+    private void reread()
     {
         if (MavenPrimeSettings.getInstance(project).autoRefresh && MavenProjects.isMavenized(project))
         {

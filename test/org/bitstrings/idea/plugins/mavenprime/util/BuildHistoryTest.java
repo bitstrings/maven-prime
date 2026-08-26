@@ -62,18 +62,49 @@ public class BuildHistoryTest
     }
 
     @Test
+    public void start_aHistoryToldToKeepFewer_dropsDownToThatCountAsSoonAsTheNextBuildArrives()
+    {
+        BuildHistory<String> history = new BuildHistory<>(() -> "empty", () -> 2);
+
+        for (int index = 0; index < 5; index++)
+        {
+            history.start("build" + index, "data" + index);
+        }
+
+        assertEquals(
+            "lowering the setting has to take effect without a restart, or the reader keeps paying "
+                + "memory for runs they asked to forget",
+            2,
+            history.getEntries().size());
+    }
+
+    @Test
+    public void start_aRetentionOfZero_stillKeepsTheRunItJustRecorded()
+    {
+        BuildHistory<String> history = new BuildHistory<>(() -> "empty", () -> 0);
+
+        history.start("only", "data");
+
+        assertEquals(
+            "trimming to nothing removes from an empty list and throws before the run is recorded, so "
+                + "a hand-edited zero would take the history down with it",
+            1,
+            history.getEntries().size());
+    }
+
+    @Test
     public void start_beyondTheRetentionLimit_dropsTheOldest()
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty");
 
-        for (int index = 0; index <= BuildHistory.MAX_RETAINED; index++)
+        for (int index = 0; index <= BuildHistory.DEFAULT_RETAINED; index++)
         {
             history.start("build" + index, "data" + index);
         }
 
         List<BuildEntry<String>> entries = history.getEntries();
 
-        assertEquals(BuildHistory.MAX_RETAINED, entries.size());
+        assertEquals(BuildHistory.DEFAULT_RETAINED, entries.size());
         assertEquals("build1", entries.get(0).name());
     }
 
