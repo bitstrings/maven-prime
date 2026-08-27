@@ -4,6 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,6 +25,8 @@ import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.RepositoryEvent;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.metadata.DefaultMetadata;
@@ -29,7 +34,9 @@ import org.eclipse.aether.metadata.Metadata;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class SpyReporterTest
 {
@@ -44,6 +51,9 @@ public class SpyReporterTest
     private static final String PARENT_MODEL_ID = "org.example:parent:1.0.0";
 
     private static final String PARENT_POM = "/repo/parent/pom.xml";
+
+    @Rule
+    public final TemporaryFolder temporary = new TemporaryFolder();
 
     private final RecordingSink sink = new RecordingSink();
 
@@ -127,8 +137,28 @@ public class SpyReporterTest
                 GOAL,
                 EXECUTION_ID,
                 "500",
-                "300"),
+                "300",
+                "",
+                worker()),
             sink.firstOf(SpyProtocol.MOJO_TIMING));
+    }
+
+    @Test
+    public void report_aMojoBoundToALifecyclePhase_writesThePhaseItRanIn()
+    {
+        reporter.report(mojoEvent(ExecutionEvent.Type.MojoStarted).inPhase("test"));
+        reporter.report(mojoEvent(ExecutionEvent.Type.MojoSucceeded).inPhase("test"));
+
+        assertEquals("test", SpyProtocol.decode(sink.firstOf(SpyProtocol.MOJO_TIMING))[6]);
+    }
+
+    @Test
+    public void report_aMojoInvokedStraightFromTheCommandLine_writesNoPhase()
+    {
+        reporter.report(mojoEvent(ExecutionEvent.Type.MojoStarted));
+        reporter.report(mojoEvent(ExecutionEvent.Type.MojoSucceeded));
+
+        assertEquals("", SpyProtocol.decode(sink.firstOf(SpyProtocol.MOJO_TIMING))[6]);
     }
 
     @Test
@@ -163,8 +193,21 @@ public class SpyReporterTest
 
         assertEquals(
             SpyProtocol.encode(
-                SpyProtocol.PROJECT_TIMING, MODULE, "400", "500"),
+                SpyProtocol.PROJECT_TIMING, MODULE, "400", "500", worker()),
             sink.firstOf(SpyProtocol.PROJECT_TIMING));
+    }
+
+    @Test
+    public void report_projectSucceeded_namesTheBuilderThreadThatRanIt()
+    {
+        reporter.report(event(ExecutionEvent.Type.ProjectStarted).on("org.example", "core", "Core"));
+        reporter.report(event(ExecutionEvent.Type.ProjectSucceeded).on("org.example", "core", "Core"));
+
+        assertEquals(
+            "Maven renames the pooled thread after the project it is running, so only the id tells "
+                + "two modules that shared a worker from two that did not",
+            worker(),
+            SpyProtocol.decode(sink.firstOf(SpyProtocol.PROJECT_TIMING))[4]);
     }
 
     @Test
@@ -236,6 +279,79 @@ public class SpyReporterTest
     }
 
     @Test
+    public void report_anArtifactDownloaded_writesWhenItStartedHowLongItTookAndItsSize()
+        throws IOException
+    {
+        File downloaded = fileOfSize(2048);
+
+        clock.set(1000L);
+        reporter.report(event(ExecutionEvent.Type.SessionStarted));
+        reporter.report(downloadEvent(RepositoryEvent.EventType.ARTIFACT_DOWNLOADING, null));
+
+        clock.set(1750L);
+        reporter.report(downloadEvent(RepositoryEvent.EventType.ARTIFACT_DOWNLOADED, downloaded));
+
+        assertEquals(
+            SpyProtocol.encode(
+                SpyProtocol.ARTIFACT_DOWNLOADED,
+                "org.example:widget:jar:1.0",
+                "central",
+                "0",
+                "750",
+                "2048"),
+            sink.firstOf(SpyProtocol.ARTIFACT_DOWNLOADED));
+    }
+
+    @Test
+    public void report_anArtifactDownloadedThatWasNeverAnnounced_writesNoTiming()
+    {
+        reporter.report(downloadEvent(RepositoryEvent.EventType.ARTIFACT_DOWNLOADED, null));
+
+        assertNull(
+            "a duration measured from a start nobody recorded is the whole session, not the transfer",
+            sink.firstOf(SpyProtocol.ARTIFACT_DOWNLOADED));
+    }
+
+    @Test
+    public void report_metadataDownloaded_isReportedApartFromTheArtifacts()
+    {
+        reporter.report(metadataEvent(RepositoryEvent.EventType.METADATA_DOWNLOADING));
+        reporter.report(metadataEvent(RepositoryEvent.EventType.METADATA_DOWNLOADED));
+
+        assertEquals(
+            "org.example:widget:1.0",
+            SpyProtocol.decode(sink.firstOf(SpyProtocol.METADATA_DOWNLOADED))[1]);
+    }
+
+    @Test
+    public void report_aMetadataDownload_isNotAnnouncedAsAnArtifactDownload()
+    {
+        reporter.report(metadataEvent(RepositoryEvent.EventType.METADATA_DOWNLOADING));
+
+        assertNull(
+            "the Repository tab lists what it was told is downloading, and metadata is not an artifact",
+            sink.firstOf(SpyProtocol.ARTIFACT_DOWNLOADING));
+    }
+
+    @Test
+    public void sizeOf_aDownloadWhoseFileTheEventNeverCarried_readsItFromTheArtifact()
+        throws IOException
+    {
+        Artifact carrying = artifact("").setFile(fileOfSize(64));
+
+        assertEquals(
+            64L,
+            SpyReporter.sizeOf(
+                downloadEvent(RepositoryEvent.EventType.ARTIFACT_DOWNLOADED, null, carrying)));
+    }
+
+    @Test
+    public void sizeOf_aDownloadWithNoFileAnywhere_readsAsZeroRatherThanFailing()
+    {
+        assertEquals(0L, SpyReporter.sizeOf(downloadEvent(RepositoryEvent.EventType.ARTIFACT_DOWNLOADED, null)));
+    }
+
+    @Test
     public void writeArtifactFailure_aFailureCarryingNoText_writesNothing()
     {
         reporter.writeArtifactFailure(artifact(""), remote(), "");
@@ -257,10 +373,7 @@ public class SpyReporterTest
     @Test
     public void writeMetadataFailure_aRealFailure_writesTheMetadataCoordinates()
     {
-        Metadata metadata =
-            new DefaultMetadata("org.example", "widget", "1.0", "maven-metadata.xml", Metadata.Nature.RELEASE);
-
-        reporter.writeMetadataFailure(metadata, remote(), "boom");
+        reporter.writeMetadataFailure(metadata(), remote(), "boom");
 
         assertEquals(
             SpyProtocol.encode(SpyProtocol.METADATA_FAILED, "org.example:widget:1.0", "central", "boom"),
@@ -395,6 +508,11 @@ public class SpyReporterTest
         assertTrue(!SpyReporter.mojoKey(first).equals(SpyReporter.mojoKey(second)));
     }
 
+    private static String worker()
+    {
+        return String.valueOf(Thread.currentThread().threadId());
+    }
+
     private static Exception buried(int depth)
     {
         Exception failure = new MojoFailureException("short", "short", "detail");
@@ -410,6 +528,45 @@ public class SpyReporterTest
     private static Artifact artifact(String classifier)
     {
         return new DefaultArtifact("org.example", "widget", classifier, "jar", "1.0");
+    }
+
+    private static Metadata metadata()
+    {
+        return new DefaultMetadata(
+            "org.example", "widget", "1.0", "maven-metadata.xml", Metadata.Nature.RELEASE);
+    }
+
+    private File fileOfSize(int bytes)
+        throws IOException
+    {
+        File file = temporary.newFile();
+
+        Files.write(file.toPath(), new byte[bytes]);
+
+        return file;
+    }
+
+    private static RepositoryEvent downloadEvent(RepositoryEvent.EventType type, File file)
+    {
+        return downloadEvent(type, file, artifact(""));
+    }
+
+    private static RepositoryEvent downloadEvent(
+        RepositoryEvent.EventType type, File file, Artifact subject)
+    {
+        return new RepositoryEvent.Builder(new DefaultRepositorySystemSession(), type)
+            .setArtifact(subject)
+            .setRepository(remote())
+            .setFile(file)
+            .build();
+    }
+
+    private static RepositoryEvent metadataEvent(RepositoryEvent.EventType type)
+    {
+        return new RepositoryEvent.Builder(new DefaultRepositorySystemSession(), type)
+            .setMetadata(metadata())
+            .setRepository(remote())
+            .build();
     }
 
     private static RemoteRepository remote()
@@ -526,6 +683,13 @@ public class SpyReporterTest
             plugin.setArtifactId(pluginArtifactId);
 
             mojoExecution = new MojoExecution(plugin, goal, executionId);
+
+            return this;
+        }
+
+        Event inPhase(String phase)
+        {
+            mojoExecution.setLifecyclePhase(phase);
 
             return this;
         }

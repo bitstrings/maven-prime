@@ -32,7 +32,7 @@ public final class BuildHistory<T>
         this.retained = retained;
     }
 
-    public T start(String name, T data)
+    public T start(String name, String goals, T data)
     {
         synchronized (lock)
         {
@@ -43,7 +43,12 @@ public final class BuildHistory<T>
                 entries.remove(0);
             }
 
-            entries.add(new BuildEntry<>(StringUtils.defaultString(name), System.currentTimeMillis(), data));
+            entries.add(
+                new BuildEntry<>(
+                    StringUtils.defaultString(name),
+                    StringUtils.defaultString(goals),
+                    System.currentTimeMillis(),
+                    data));
 
             selected = entries.size() - 1;
         }
@@ -99,7 +104,7 @@ public final class BuildHistory<T>
         }
     }
 
-    public record BuildEntry<T>(String name, long startedMillis, T data)
+    public record BuildEntry<T>(String name, String goals, long startedMillis, T data)
     {
     }
 }

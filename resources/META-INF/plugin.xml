@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>org.bitstrings.idea.plugins.MavenPrime</id>
     <name>Maven Prime</name>
-    <vendor email="pino.silvaggio@gmail.com" url="https://github.com/bitstrings/maven-plus">bitstrings.org</vendor>
+    <vendor email="pino.silvaggio@gmail.com" url="https://github.com/bitstrings/maven-prime">bitstrings.org</vendor>
 
     <description><![CDATA[
       <p>

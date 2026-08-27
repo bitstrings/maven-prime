@@ -35,21 +35,25 @@ public class RetainedBuildsPlatformTest
     {
         BuildProfileService profiles = BuildProfileService.getInstance(getProject());
 
-        assertEquals(KEEP, retainedAfter(profiles::startBuild, () -> profiles.getBuilds().size()));
+        assertEquals(KEEP, retainedAfter(name -> profiles.startBuild(name, ""), () -> profiles.getBuilds().size()));
     }
 
     public void testStartBuild_aLoweredRetention_trimsTheModelHistory()
     {
         ProvenanceLog provenances = ProvenanceLog.getInstance(getProject());
 
-        assertEquals(KEEP, retainedAfter(provenances::startBuild, () -> provenances.getBuilds().size()));
+        assertEquals(
+            KEEP,
+            retainedAfter(name -> provenances.startBuild(name, ""), () -> provenances.getBuilds().size()));
     }
 
     public void testStartBuild_aLoweredRetention_trimsTheRepositoryHistory()
     {
         ResolutionLog resolutions = ResolutionLog.getInstance(getProject());
 
-        assertEquals(KEEP, retainedAfter(resolutions::startBuild, () -> resolutions.getBuilds().size()));
+        assertEquals(
+            KEEP,
+            retainedAfter(name -> resolutions.startBuild(name, ""), () -> resolutions.getBuilds().size()));
     }
 
     // A history handed a fixed limit instead of the setting passes every test that only exercises

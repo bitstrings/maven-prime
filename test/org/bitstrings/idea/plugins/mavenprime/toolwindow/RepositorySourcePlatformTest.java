@@ -43,7 +43,7 @@ public class RepositorySourcePlatformTest
     {
         ResolutionLog log = ResolutionLog.getInstance(getProject());
 
-        ResolutionData recording = log.startBuild(getName());
+        ResolutionData recording = log.startBuild(getName(), "");
 
         recording.accept(DOWNLOAD);
         recording.accept(FAILURE);

@@ -15,13 +15,30 @@ public final class ProfileFacts
     {
     }
 
-    public static List<Fact> of(BuildProfileSummary summary)
+    public static List<Fact> of(BuildProfile profile, BuildProfileSummary summary)
     {
         List<Fact> facts = new ArrayList<>();
 
         facts.add(new Fact(Measure.WALL_CLOCK, summary.wallClockMillis()));
-        facts.add(new Fact(Measure.WORK, summary.totalWorkMillis()));
-        facts.add(new Fact(Measure.CRITICAL_PATH, summary.criticalPathMillis()));
+
+        // A row repeating the wall clock under a second name teaches the reader nothing and reads as a
+        // measurement that failed, which is what a single-module build produced for every row.
+        if (summary.totalWorkMillis() != summary.wallClockMillis())
+        {
+            facts.add(new Fact(Measure.WORK, summary.totalWorkMillis()));
+        }
+
+        if (summary.criticalPathMillis() != summary.wallClockMillis())
+        {
+            facts.add(new Fact(Measure.CRITICAL_PATH, summary.criticalPathMillis()));
+        }
+
+        long idle = WorkerIdle.totalMillis(profile.getIdleGaps());
+
+        if (idle > 0L)
+        {
+            facts.add(new Fact(Measure.IDLE, idle));
+        }
 
         // Below the scheduling overhead the gap is the graph, not the thread count, and the two rows
         // would carry one number under labels that contradict each other.
@@ -54,6 +71,25 @@ public final class ProfileFacts
         return steps;
     }
 
+    public static List<Gain> gains(BuildProfile profile, BuildProfileSummary summary, int limit)
+    {
+        return profile
+            .getPayoff()
+            .entrySet()
+            .stream()
+            .filter(entry -> entry.getValue().longValue() > 0L)
+            .sorted(
+                Map.Entry.<String, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+            .limit(limit)
+            .map(entry -> gainOf(entry.getKey(), entry.getValue().longValue(), summary))
+            .toList();
+    }
+
+    private static Gain gainOf(String module, long millis, BuildProfileSummary summary)
+    {
+        return new Gain(module, millis, shareOf(millis, summary.wallClockMillis()));
+    }
+
     private static Map<String, Long> durationsOf(BuildProfile profile)
     {
         Map<String, Long> durations = new LinkedHashMap<>();
@@ -76,6 +112,7 @@ public final class ProfileFacts
         WALL_CLOCK("wallClock"),
         WORK("work"),
         CRITICAL_PATH("criticalPath"),
+        IDLE("idle"),
         RECOVERABLE("recoverable"),
         SCHEDULING_LOSS("schedulingLoss");
 
@@ -90,6 +127,11 @@ public final class ProfileFacts
         {
             return "mavenprime.profile.measure." + bundleKey;
         }
+
+        public String getHelpKey()
+        {
+            return "mavenprime.profile.help." + bundleKey;
+        }
     }
 
     public record Fact(Measure measure, long millis)
@@ -97,6 +139,10 @@ public final class ProfileFacts
     }
 
     public record Step(String module, long durationMillis, double sharePercent)
+    {
+    }
+
+    public record Gain(String module, long millis, double sharePercent)
     {
     }
 }

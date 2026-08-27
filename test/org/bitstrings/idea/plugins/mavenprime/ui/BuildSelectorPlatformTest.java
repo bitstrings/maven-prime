@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.swing.JComboBox;
 
+import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.util.BuildHistory.BuildEntry;
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
@@ -13,6 +14,8 @@ public class BuildSelectorPlatformTest
     extends BasePlatformTestCase
 {
     private static final long STARTED_MILLIS = 1_700_000_000_000L;
+
+    private static final String GOALS = "clean install -DskipTests";
 
     public void testReload_severalBuilds_showsTheSelector()
     {
@@ -73,8 +76,37 @@ public class BuildSelectorPlatformTest
         return (JComboBox<?>) selector.getComponent();
     }
 
+    public void testReload_aBuildThatRecordedItsGoals_reachesThemFromTheSelector()
+    {
+        BuildSelector<String> selector = new BuildSelector<>(entry -> { });
+
+        selector.reload(List.of(ran("first", GOALS)), ran("first", GOALS));
+
+        assertEquals(
+            "the goal line is as long as the user made it, so the selector carries it rather than "
+                + "laying it out",
+            MavenPrimeBundle.message("mavenprime.build.goals", GOALS),
+            selector.getComponent().getToolTipText());
+    }
+
+    public void testReload_aBuildWhoseGoalsWereNeverRecorded_carriesNoTooltipAtAll()
+    {
+        BuildSelector<String> selector = new BuildSelector<>(entry -> { });
+
+        selector.reload(List.of(build("adopted")), build("adopted"));
+
+        assertNull(
+            "an empty tooltip box under the cursor says the goals are unknown less clearly than none",
+            selector.getComponent().getToolTipText());
+    }
+
     private static BuildEntry<String> build(String name)
     {
-        return new BuildEntry<>(name, STARTED_MILLIS, name);
+        return ran(name, "");
+    }
+
+    private static BuildEntry<String> ran(String name, String goals)
+    {
+        return new BuildEntry<>(name, goals, STARTED_MILLIS, name);
     }
 }

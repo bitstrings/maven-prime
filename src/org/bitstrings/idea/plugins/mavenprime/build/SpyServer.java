@@ -170,7 +170,7 @@ public final class SpyServer
                     return;
                 }
 
-                adopted = SpySession.adopt(project, buildNameOf(greeting));
+                adopted = SpySession.adopt(project, buildNameOf(greeting), StringUtils.EMPTY);
                 token = adopted.getToken();
                 claimed = registrations.get(token);
             }

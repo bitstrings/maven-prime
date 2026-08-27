@@ -13,6 +13,11 @@ public final class ProfileVerdict
 
     public static String badgeOf(BuildProfileSummary summary)
     {
+        if (!isParallelisable(summary))
+        {
+            return MavenPrimeBundle.message("mavenprime.profile.badge.noParallelism");
+        }
+
         return MavenPrimeBundle.message(
             switch (summary.concurrency())
             {
@@ -20,6 +25,13 @@ public final class ProfileVerdict
                 case DEPENDENCY_BOUND -> "mavenprime.profile.badge.dependencyBound";
                 case THREAD_STARVED -> "mavenprime.profile.badge.threadStarved";
             });
+    }
+
+    // Advising a thread count on a reactor that cannot overlap renders "-T 1, which could bring 6s down
+    // to 6s": the verdict contradicts itself and the reader is told to change nothing.
+    private static boolean isParallelisable(BuildProfileSummary summary)
+    {
+        return summary.usefulThreads() > 1;
     }
 
     public static String sentenceOf(BuildProfileSummary summary)
@@ -37,6 +49,14 @@ public final class ProfileVerdict
 
     private static String messageOf(BuildProfileSummary summary)
     {
+        if (!isParallelisable(summary))
+        {
+            return (summary.criticalPath().size() > 1)
+                ? MavenPrimeBundle.message(
+                    "mavenprime.profile.verdict.chain", Integer.valueOf(summary.criticalPath().size()))
+                : MavenPrimeBundle.message("mavenprime.profile.verdict.oneModule");
+        }
+
         return switch (summary.concurrency())
         {
             case SEQUENTIAL ->

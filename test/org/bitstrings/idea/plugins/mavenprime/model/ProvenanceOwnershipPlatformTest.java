@@ -11,11 +11,11 @@ public class ProvenanceOwnershipPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        ProvenanceData running = log.startBuild("clean install");
+        ProvenanceData running = log.startBuild("clean install", "");
 
         running.accept(origin("core", "commons-io"));
 
-        log.startBuild("clean verify");
+        log.startBuild("clean verify", "");
 
         assertEquals(
             "a later build must not erase a running build's provenance",
@@ -27,8 +27,8 @@ public class ProvenanceOwnershipPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        ProvenanceData running = log.startBuild("clean install");
-        ProvenanceData later = log.startBuild("clean verify");
+        ProvenanceData running = log.startBuild("clean install", "");
+        ProvenanceData later = log.startBuild("clean verify", "");
 
         running.accept(origin("core", "commons-io"));
 
@@ -39,9 +39,9 @@ public class ProvenanceOwnershipPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        log.startBuild("clean install");
+        log.startBuild("clean install", "");
 
-        ProvenanceData newest = log.startBuild("clean verify");
+        ProvenanceData newest = log.startBuild("clean verify", "");
 
         newest.accept(origin("core", "commons-io"));
 

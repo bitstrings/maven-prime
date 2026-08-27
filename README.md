@@ -2,7 +2,6 @@
 
 [![Version][badge-version]][marketplace]
 [![Downloads][badge-downloads]][marketplace]
-[![Rating][badge-rating]][marketplace]
 [![License][badge-license]][license]
 
 Maven Prime is an IntelliJ IDEA plugin for running Maven, and for finding out what Maven actually did.
@@ -237,11 +236,9 @@ request: it compiles with `-Werror`, runs both test suites and packages the plug
 
 Apache License 2.0. See [LICENSE.txt][license].
 
-<!-- Replace PLUGIN_ID below with the numeric JetBrains Marketplace id once the listing is live. -->
-[marketplace]: https://plugins.jetbrains.com/plugin/PLUGIN_ID
-[badge-version]: https://img.shields.io/jetbrains/plugin/v/PLUGIN_ID.svg?label=version
-[badge-downloads]: https://img.shields.io/jetbrains/plugin/d/PLUGIN_ID.svg
-[badge-rating]: https://img.shields.io/jetbrains/plugin/r/rating/PLUGIN_ID.svg
+[marketplace]: https://plugins.jetbrains.com/plugin/33779-maven-prime
+[badge-version]: https://img.shields.io/jetbrains/plugin/v/33779.svg?label=version
+[badge-downloads]: https://img.shields.io/jetbrains/plugin/d/33779.svg
 [badge-license]: https://img.shields.io/badge/license-Apache--2.0-blue.svg
 [releases]: https://github.com/bitstrings/maven-prime/releases/latest
 [issues]: https://github.com/bitstrings/maven-prime/issues

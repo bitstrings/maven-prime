@@ -150,7 +150,7 @@ public class BuildProfileNotifierPlatformTest
     {
         MavenPrimeSettings.getInstance(getProject()).profileNotifications = true;
 
-        BuildProfile profile = BuildProfileService.getInstance(getProject()).startBuild(getName());
+        BuildProfile profile = BuildProfileService.getInstance(getProject()).startBuild(getName(), "");
 
         profile.accept(new ModuleTiming("g:a", 0L, MINUTE));
         profile.accept(new ModuleTiming("g:b", MINUTE, MINUTE));
@@ -185,7 +185,7 @@ public class BuildProfileNotifierPlatformTest
 
     private BuildProfile starvedBuild()
     {
-        BuildProfile profile = BuildProfileService.getInstance(getProject()).startBuild(getName());
+        BuildProfile profile = BuildProfileService.getInstance(getProject()).startBuild(getName(), "");
 
         profile.accept(new ModuleTiming("g:a", 0L, HALF_MINUTE));
         profile.accept(new ModuleTiming("g:b", 0L, HALF_MINUTE));

@@ -43,6 +43,14 @@
       "description": "Profiler timeline bar for a module on the critical path"
     },
     {
+      "key": "MavenPrime.Timeline.idle",
+      "description": "Profiler timeline band where a build thread had nothing to run"
+    },
+    {
+      "key": "MavenPrime.Timeline.download",
+      "description": "Profiler timeline bar for the stretch during which the build was downloading"
+    },
+    {
       "key": "MavenPrime.Context.importForeground",
       "description": "Build context marker for a property passed to the IDE Maven import"
     }

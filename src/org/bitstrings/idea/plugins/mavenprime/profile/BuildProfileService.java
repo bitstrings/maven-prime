@@ -40,9 +40,9 @@ public final class BuildProfileService
         return project.getService(BuildProfileService.class);
     }
 
-    public BuildProfile startBuild(String name)
+    public BuildProfile startBuild(String name, String goals)
     {
-        BuildProfile profile = history.start(name, new BuildProfile());
+        BuildProfile profile = history.start(name, goals, new BuildProfile());
 
         publish();
 

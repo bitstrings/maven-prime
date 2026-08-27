@@ -30,9 +30,14 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfile;
+import org.bitstrings.idea.plugins.mavenprime.profile.DownloadSummary;
+import org.bitstrings.idea.plugins.mavenprime.profile.DownloadSummary.Interval;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
+import org.bitstrings.idea.plugins.mavenprime.profile.WorkerIdle.IdleGap;
+import org.bitstrings.idea.plugins.mavenprime.profile.WorkerLanes;
 
 import com.intellij.openapi.util.text.Formats;
 import com.intellij.ui.JBColor;
@@ -58,6 +63,8 @@ public final class BuildTimeline
     private static final int RULER_HEIGHT = 20;
 
     private static final int BAR_HEIGHT = 20;
+
+    private static final int IDLE_HEIGHT = 6;
 
     private static final int LANE_HEIGHT = 28;
 
@@ -104,7 +111,21 @@ public final class BuildTimeline
     private static final JBColor CRITICAL_BAR_TEXT =
         JBColor.namedColor("MavenPrime.Timeline.criticalBarText", 0x3A2705, 0xFFF3E0);
 
+    private static final JBColor IDLE_BAR = JBColor.namedColor("MavenPrime.Timeline.idle", 0xD8DEE4, 0x4A4F55);
+
+    private static final JBColor IDLE_BORDER =
+        JBColor.namedColor("MavenPrime.Timeline.idleBorder", 0xBFC7CF, 0x5D646C);
+
+    private static final JBColor DOWNLOAD_BAR =
+        JBColor.namedColor("MavenPrime.Timeline.download", 0x8FBC8F, 0x4E7A4E);
+
     private final transient List<Span> spans = new ArrayList<>();
+
+    private transient List<Interval> downloads = List.of();
+
+    private transient List<IdleGap> idleGaps = List.of();
+
+    private transient boolean lanesFromWorkers;
 
     private transient long wallClockMillis;
 
@@ -336,9 +357,13 @@ public final class BuildTimeline
 
         spans.clear();
 
-        Map<String, Integer> lanes = profile.getLaneAssignment();
+        WorkerLanes lanes = profile.getWorkerLanes();
 
-        laneCount = Math.max(1, lanes.values().stream().mapToInt(Integer::intValue).max().orElse(0) + 1);
+        lanesFromWorkers = lanes.isByWorker();
+        idleGaps = profile.getIdleGaps();
+        downloads = DownloadSummary.intervalsOf(profile.getDownloads());
+
+        laneCount = lanes.count();
         wallClockMillis = 0L;
 
         Map<Integer, List<ModuleTiming>> byLane = new TreeMap<>();
@@ -349,7 +374,7 @@ public final class BuildTimeline
 
             byLane
                 .computeIfAbsent(
-                    lanes.getOrDefault(module.module(), Integer.valueOf(0)), lane -> new ArrayList<>())
+                    Integer.valueOf(Math.max(0, lanes.laneOf(module.module()))), lane -> new ArrayList<>())
                 .add(module);
         }
 
@@ -384,7 +409,12 @@ public final class BuildTimeline
     {
         return new Dimension(
             (int) (viewportWidth() * zoom),
-            rulerHeight() + (laneCount * laneHeight()) + JBUI.scale(BOTTOM_MARGIN));
+            rulerHeight() + (laneRows() * laneHeight()) + JBUI.scale(BOTTOM_MARGIN));
+    }
+
+    private int laneRows()
+    {
+        return laneCount + (downloads.isEmpty() ? 0 : 1);
     }
 
     private int viewportWidth()
@@ -441,6 +471,9 @@ public final class BuildTimeline
 
             int rulerHeight = rulerHeight();
 
+            paintIdle(canvas, rulerHeight);
+            paintDownloads(canvas, rulerHeight);
+
             canvas.setFont(smallFont());
 
             FontMetrics metrics = canvas.getFontMetrics();
@@ -457,6 +490,43 @@ public final class BuildTimeline
         finally
         {
             canvas.dispose();
+        }
+    }
+
+    private void paintIdle(Graphics2D canvas, int rulerHeight)
+    {
+        canvas.setStroke(new BasicStroke(JBUI.scale(BORDER_STROKE)));
+
+        for (IdleGap gap : idleGaps)
+        {
+            Rectangle bounds = idleBoundsOf(gap, rulerHeight);
+
+            canvas.setColor(IDLE_BAR);
+            canvas.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+
+            canvas.setColor(IDLE_BORDER);
+            canvas.drawRect(bounds.x, bounds.y, bounds.width - 1, bounds.height - 1);
+        }
+    }
+
+    private void paintDownloads(Graphics2D canvas, int rulerHeight)
+    {
+        if (downloads.isEmpty())
+        {
+            return;
+        }
+
+        int top = rulerHeight + (laneCount * laneHeight());
+
+        canvas.setColor(JBColor.border());
+        canvas.drawLine(0, top, getWidth(), top);
+        canvas.setColor(DOWNLOAD_BAR);
+
+        for (Interval interval : downloads)
+        {
+            Rectangle bounds = downloadBoundsOf(interval, rulerHeight);
+
+            canvas.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
     }
 
@@ -623,6 +693,29 @@ public final class BuildTimeline
         return new Rectangle(x, rulerHeight + (span.lane() * laneHeight()), width, barHeight());
     }
 
+    private Rectangle downloadBoundsOf(Interval interval, int rulerHeight)
+    {
+        int usable = usableWidth();
+
+        return new Rectangle(
+            JBUI.scale(LEFT_GUTTER) + scaled(interval.startMillis(), usable),
+            rulerHeight + (laneCount * laneHeight()) + JBUI.scale(BORDER_STROKE),
+            Math.max(JBUI.scale(MINIMUM_BAR_WIDTH), scaled(interval.durationMillis(), usable)),
+            barHeight());
+    }
+
+    private Rectangle idleBoundsOf(IdleGap gap, int rulerHeight)
+    {
+        int usable = usableWidth();
+        int height = JBUI.scale(IDLE_HEIGHT);
+
+        return new Rectangle(
+            JBUI.scale(LEFT_GUTTER) + scaled(gap.startMillis(), usable),
+            rulerHeight + (gap.lane() * laneHeight()) + ((barHeight() - height) / 2),
+            Math.max(JBUI.scale(MINIMUM_BAR_WIDTH), scaled(gap.durationMillis(), usable)),
+            height);
+    }
+
     private int scaled(long millis, int usable)
     {
         return (wallClockMillis == 0L) ? 0 : (int) ((millis * usable) / wallClockMillis);
@@ -638,12 +731,95 @@ public final class BuildTimeline
     {
         Span span = spanAt(event.getPoint());
 
-        return (span == null)
-            ? null
-            : MavenPrimeBundle.message(
+        if (span != null)
+        {
+            return tooltipOf(span);
+        }
+
+        String idle = idleTooltipAt(event.getPoint());
+
+        return (idle == null) ? downloadTooltipAt(event.getPoint()) : idle;
+    }
+
+    private String downloadTooltipAt(Point point)
+    {
+        int rulerHeight = rulerHeight();
+
+        for (Interval interval : downloads)
+        {
+            if (downloadBoundsOf(interval, rulerHeight).contains(point))
+            {
+                return MavenPrimeBundle.message(
+                    "mavenprime.profile.tooltip.downloads",
+                    Integer.valueOf(interval.count()),
+                    Formats.formatFileSize(interval.bytes()),
+                    Formats.formatDuration(interval.durationMillis()));
+            }
+        }
+
+        return null;
+    }
+
+    private String tooltipOf(Span span)
+    {
+        String timing =
+            MavenPrimeBundle.message(
                 span.critical() ? "mavenprime.profile.tooltip.critical" : "mavenprime.profile.tooltip",
                 span.module().module(),
                 Formats.formatDuration(span.module().durationMillis()));
+
+        return lanesFromWorkers
+            ? MavenPrimeBundle.message(
+                "mavenprime.profile.tooltip.on",
+                timing,
+                MavenPrimeBundle.message("mavenprime.profile.worker", Integer.valueOf(span.lane() + 1)))
+            : timing;
+    }
+
+    private String idleTooltipAt(Point point)
+    {
+        IdleGap gap = gapAt(point);
+
+        if (gap == null)
+        {
+            return null;
+        }
+
+        String idle = Formats.formatDuration(gap.durationMillis());
+
+        String worker =
+            MavenPrimeBundle.message("mavenprime.profile.worker", Integer.valueOf(gap.lane() + 1));
+
+        return StringUtils.isBlank(gap.lastUpstream())
+            ? MavenPrimeBundle.message("mavenprime.profile.tooltip.idle", worker, idle)
+            : MavenPrimeBundle.message(
+                "mavenprime.profile.tooltip.idleWaiting",
+                worker,
+                idle,
+                gap.nextModule(),
+                gap.lastUpstream());
+    }
+
+    private IdleGap gapAt(Point point)
+    {
+        int lane = laneAt(point.y);
+
+        if (lane < 0)
+        {
+            return null;
+        }
+
+        int rulerHeight = rulerHeight();
+
+        for (IdleGap gap : idleGaps)
+        {
+            if ((gap.lane() == lane) && idleBoundsOf(gap, rulerHeight).contains(point))
+            {
+                return gap;
+            }
+        }
+
+        return null;
     }
 
     private record Span(ModuleTiming module, int lane, boolean critical, long nextStartMillis)

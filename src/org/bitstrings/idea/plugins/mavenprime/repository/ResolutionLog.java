@@ -39,9 +39,9 @@ public final class ResolutionLog
         return project.getService(ResolutionLog.class);
     }
 
-    public ResolutionData startBuild(String name)
+    public ResolutionData startBuild(String name, String goals)
     {
-        ResolutionData data = history.start(name, new ResolutionData());
+        ResolutionData data = history.start(name, goals, new ResolutionData());
 
         publish();
 

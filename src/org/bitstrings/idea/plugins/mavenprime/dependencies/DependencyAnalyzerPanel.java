@@ -111,7 +111,7 @@ public final class DependencyAnalyzerPanel
 
     private static final boolean DEFAULT_COLOR = true;
 
-    private static final boolean DEFAULT_VERTICAL = true;
+    private static final boolean DEFAULT_VERTICAL = false;
 
     private static final float SPLITTER_PROPORTION = 0.5F;
 
@@ -387,9 +387,9 @@ public final class DependencyAnalyzerPanel
                 selected -> applyColor(selected.booleanValue())));
         group.add(
             new CommandToggleAction(
-                MavenPrimeBundle.message("mavenprime.dependencies.splitVertically"),
-                MavenPrimeBundle.message("mavenprime.dependencies.splitVertically.description"),
-                AllIcons.Actions.SplitVertically,
+                MavenPrimeBundle.message("mavenprime.dependencies.splitHorizontally"),
+                MavenPrimeBundle.message("mavenprime.dependencies.splitHorizontally.description"),
+                AllIcons.Actions.SplitHorizontally,
                 () -> state.isEnabled(VERTICAL_KEY, DEFAULT_VERTICAL),
                 selected -> applyOrientation(selected.booleanValue())));
         group.addSeparator();

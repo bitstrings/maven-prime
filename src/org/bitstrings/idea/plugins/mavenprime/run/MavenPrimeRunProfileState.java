@@ -127,6 +127,7 @@ public final class MavenPrimeRunProfileState
             SpySession.timed(
                 project,
                 configuration.getName(),
+                request.getGoalLine(),
                 line -> SpyEvents.parse(line).ifPresent(listener::accept));
 
         KillableColoredProcessHandler processHandler;

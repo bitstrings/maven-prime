@@ -59,7 +59,7 @@ public class SpySessionPlatformTest
 
     private SpySession started()
     {
-        return SpySession.timed(getProject(), BUILD_NAME, null);
+        return SpySession.timed(getProject(), BUILD_NAME, "", null);
     }
 
     private long profileCompletenessDrops()

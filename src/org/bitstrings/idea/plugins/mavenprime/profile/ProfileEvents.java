@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.DownloadTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleFailed;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
@@ -37,6 +38,8 @@ public final class ProfileEvents
             case SpyProtocol.MOJO_TIMING -> mojoTiming(fields);
             case SpyProtocol.REACTOR_EDGE -> reactorEdge(fields);
             case SpyProtocol.PROJECT_FAILED -> moduleFailed(fields);
+            case SpyProtocol.ARTIFACT_DOWNLOADED -> downloadTiming(fields, DownloadKind.ARTIFACT);
+            case SpyProtocol.METADATA_DOWNLOADED -> downloadTiming(fields, DownloadKind.METADATA);
             default -> Optional.empty();
         };
     }
@@ -50,7 +53,7 @@ public final class ProfileEvents
 
         return (StringUtils.isBlank(module) || (start < 0) || (duration < 0))
             ? Optional.empty()
-            : Optional.of(new ModuleTiming(module, start, duration));
+            : Optional.of(new ModuleTiming(module, start, duration, field(fields, 4)));
     }
 
     private static Optional<ProfileEvent> mojoTiming(String[] fields)
@@ -63,7 +66,24 @@ public final class ProfileEvents
 
         return (StringUtils.isBlank(module) || StringUtils.isBlank(goal) || (start < 0) || (duration < 0))
             ? Optional.empty()
-            : Optional.of(new MojoTiming(module, goal, field(fields, 3), start, duration));
+            : Optional.of(
+                new MojoTiming(
+                    module, goal, field(fields, 3), start, duration, field(fields, 6), field(fields, 7)));
+    }
+
+    private static Optional<ProfileEvent> downloadTiming(String[] fields, DownloadKind kind)
+    {
+        String coordinates = field(fields, 1);
+
+        long start = number(fields, 3);
+        long duration = number(fields, 4);
+        long bytes = NumberUtils.toLong(field(fields, 5), 0L);
+
+        return (StringUtils.isBlank(coordinates) || (start < 0) || (duration < 0))
+            ? Optional.empty()
+            : Optional.of(
+                new DownloadTiming(
+                    kind, coordinates, field(fields, 2), start, duration, Math.max(0L, bytes)));
     }
 
     private static Optional<ProfileEvent> moduleFailed(String[] fields)

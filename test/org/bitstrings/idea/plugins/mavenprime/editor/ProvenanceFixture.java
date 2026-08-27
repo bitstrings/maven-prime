@@ -56,7 +56,7 @@ final class ProvenanceFixture
         Map<String, String> dependencyVersions,
         Map<String, String> pluginVersions)
     {
-        ProvenanceData data = ProvenanceLog.getInstance(project).startBuild("hints");
+        ProvenanceData data = ProvenanceLog.getInstance(project).startBuild("hints", "");
 
         data.accept(new PropertyOrigin(MODULE, "revision", REVISION, PARENT));
         data.accept(new PropertyOrigin(MODULE, "stamp", "42", ModelOrigin.UNKNOWN));

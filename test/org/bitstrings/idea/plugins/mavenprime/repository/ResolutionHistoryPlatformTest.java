@@ -17,7 +17,7 @@ public class ResolutionHistoryPlatformTest
     {
         ResolutionLog log = ResolutionLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("only")).accept(download());
+        log.startBuild(buildNamed("only"), "").accept(download());
 
         assertEquals(1, log.getDownloads().size());
     }
@@ -26,7 +26,7 @@ public class ResolutionHistoryPlatformTest
     {
         ResolutionLog log = ResolutionLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("only"));
+        log.startBuild(buildNamed("only"), "");
 
         assertEquals(buildNamed("only"), log.getSelectedBuild().name());
     }
@@ -35,8 +35,8 @@ public class ResolutionHistoryPlatformTest
     {
         ResolutionLog log = ResolutionLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("first"));
-        log.startBuild(buildNamed("second"));
+        log.startBuild(buildNamed("first"), "");
+        log.startBuild(buildNamed("second"), "");
 
         assertTrue(
             "every recorded build has to be reachable from the selector",
@@ -47,11 +47,11 @@ public class ResolutionHistoryPlatformTest
     {
         ResolutionLog log = ResolutionLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("earlier")).accept(download());
+        log.startBuild(buildNamed("earlier"), "").accept(download());
 
         BuildEntry<ResolutionData> earlier = log.getSelectedBuild();
 
-        log.startBuild(buildNamed("newer"));
+        log.startBuild(buildNamed("newer"), "");
 
         log.select(earlier);
 
@@ -62,8 +62,8 @@ public class ResolutionHistoryPlatformTest
     {
         ResolutionLog log = ResolutionLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("earlier")).accept(download());
-        log.startBuild(buildNamed("newer"));
+        log.startBuild(buildNamed("earlier"), "").accept(download());
+        log.startBuild(buildNamed("newer"), "");
 
         assertEquals(
             "each build owns its downloads, so the newest one does not inherit them",

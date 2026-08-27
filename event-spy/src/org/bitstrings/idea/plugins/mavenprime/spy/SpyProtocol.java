@@ -40,6 +40,10 @@ public final class SpyProtocol
 
     public static final String ARTIFACT_DOWNLOADING = "ARTIFACT_DOWNLOADING";
 
+    public static final String ARTIFACT_DOWNLOADED = "ARTIFACT_DOWNLOADED";
+
+    public static final String METADATA_DOWNLOADED = "METADATA_DOWNLOADED";
+
     public static final String ARTIFACT_FAILED = "ARTIFACT_FAILED";
 
     public static final String METADATA_FAILED = "METADATA_FAILED";

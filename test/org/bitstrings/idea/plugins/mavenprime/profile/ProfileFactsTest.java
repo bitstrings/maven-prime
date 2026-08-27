@@ -17,7 +17,7 @@ public class ProfileFactsTest
     @Test
     public void of_anyBuild_leadsWithTheWallClockBecauseThatIsTheNumberOnTheHeader()
     {
-        assertEquals(Measure.WALL_CLOCK, ProfileFacts.of(summarize()).get(0).measure());
+        assertEquals(Measure.WALL_CLOCK, factsOf(sequential()).get(0).measure());
     }
 
     @Test
@@ -46,9 +46,30 @@ public class ProfileFactsTest
     }
 
     @Test
+    public void of_aBuildOfOneModule_leavesOutTheWorkRowThatWouldRepeatTheWallClock()
+    {
+        assertFalse(
+            "a row carrying the wall clock under a second name reads as a measurement that failed, "
+                + "and a one-module build produced that for every row",
+            measuresOf(sequential()).contains(Measure.WORK));
+    }
+
+    @Test
+    public void of_aBuildOfOneModule_leavesOutTheCriticalPathRowThatWouldRepeatItToo()
+    {
+        assertFalse(measuresOf(sequential()).contains(Measure.CRITICAL_PATH));
+    }
+
+    @Test
+    public void of_aBuildWhoseModulesOverlapped_keepsTheWorkRowBecauseItDiffers()
+    {
+        assertTrue(measuresOf(threadStarved()).contains(Measure.WORK));
+    }
+
+    @Test
     public void of_aBuildWithNoSchedulingOverhead_leavesThatRowOut()
     {
-        assertFalse(measuresOf(summarize()).contains(Measure.SCHEDULING_LOSS));
+        assertFalse(measuresOf(sequential()).contains(Measure.SCHEDULING_LOSS));
     }
 
     @Test
@@ -79,22 +100,27 @@ public class ProfileFactsTest
         assertEquals(0L, ProfileFacts.criticalPath(new BuildProfile(), summary).get(0).durationMillis());
     }
 
-    private static List<Measure> measuresOf(BuildProfileSummary summary)
+    private static List<Measure> measuresOf(BuildProfile profile)
     {
-        return ProfileFacts.of(summary).stream().map(ProfileFacts.Fact::measure).toList();
+        return factsOf(profile).stream().map(ProfileFacts.Fact::measure).toList();
     }
 
-    private static BuildProfileSummary summarize()
+    private static List<ProfileFacts.Fact> factsOf(BuildProfile profile)
+    {
+        return ProfileFacts.of(profile, profile.summarize());
+    }
+
+    private static BuildProfile sequential()
     {
         BuildProfile profile = new BuildProfile();
 
         profile.accept(new ModuleTiming("g:a", 0L, 100L));
 
-        return profile.summarize();
+        return profile;
     }
 
     // A chain longer than the work spread over the lanes it ran in, started late enough to leave a gap.
-    private static BuildProfileSummary dependencyBound()
+    private static BuildProfile dependencyBound()
     {
         BuildProfile profile = new BuildProfile();
 
@@ -103,11 +129,11 @@ public class ProfileFactsTest
         profile.accept(new ModuleTiming("g:c", 0L, 10L));
         profile.accept(new ProfileEvent.ReactorEdge("g:b", "g:a"));
 
-        return profile.summarize();
+        return profile;
     }
 
     // Four independent modules that only ever filled two lanes.
-    private static BuildProfileSummary threadStarved()
+    private static BuildProfile threadStarved()
     {
         BuildProfile profile = new BuildProfile();
 
@@ -116,6 +142,6 @@ public class ProfileFactsTest
         profile.accept(new ModuleTiming("g:c", 100L, 100L));
         profile.accept(new ModuleTiming("g:d", 100L, 100L));
 
-        return profile.summarize();
+        return profile;
     }
 }

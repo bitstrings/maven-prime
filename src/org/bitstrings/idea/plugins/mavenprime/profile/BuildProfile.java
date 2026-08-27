@@ -1,7 +1,6 @@
 package org.bitstrings.idea.plugins.mavenprime.profile;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,6 +8,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfileSummary.Concurrency;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.DownloadTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleFailed;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
@@ -22,6 +22,8 @@ public final class BuildProfile
     private final List<ModuleTiming> modules = new ArrayList<>();
 
     private final List<MojoTiming> mojos = new ArrayList<>();
+
+    private final List<DownloadTiming> downloads = new ArrayList<>();
 
     private final Map<String, Set<String>> upstreams = new TreeMap<>();
 
@@ -50,6 +52,7 @@ public final class BuildProfile
             {
                 case ModuleTiming module -> modules.add(module);
                 case MojoTiming mojo -> mojos.add(mojo);
+                case DownloadTiming download -> downloads.add(download);
                 case ReactorEdge edge ->
                     upstreams.computeIfAbsent(edge.module(), key -> new TreeSet<>()).add(edge.upstream());
                 case ModuleFailed failure -> failed.add(failure.module());
@@ -89,11 +92,48 @@ public final class BuildProfile
         }
     }
 
-    public Map<String, Integer> getLaneAssignment()
+    public List<MojoTiming> getMojos()
     {
         synchronized (lock)
         {
-            return ReactorLanes.assign(modules);
+            return List.copyOf(mojos);
+        }
+    }
+
+    public List<DownloadTiming> getDownloads()
+    {
+        synchronized (lock)
+        {
+            return List.copyOf(downloads);
+        }
+    }
+
+    public DownloadSummary summarizeDownloads()
+    {
+        return DownloadSummary.of(getDownloads());
+    }
+
+    public Map<String, Long> getPayoff()
+    {
+        synchronized (lock)
+        {
+            return modules.isEmpty() ? Map.of() : ReactorPayoff.of(durationsOf(), upstreams);
+        }
+    }
+
+    public WorkerLanes getWorkerLanes()
+    {
+        synchronized (lock)
+        {
+            return WorkerLanes.of(modules);
+        }
+    }
+
+    public List<WorkerIdle.IdleGap> getIdleGaps()
+    {
+        synchronized (lock)
+        {
+            return WorkerIdle.gaps(List.copyOf(modules), WorkerLanes.of(modules), upstreams);
         }
     }
 
@@ -106,7 +146,7 @@ public final class BuildProfile
                 return BuildProfileSummary.empty();
             }
 
-            Map<String, Long> durations = new TreeMap<>();
+            Map<String, Long> durations = durationsOf();
 
             long totalWork = 0L;
             long earliest = Long.MAX_VALUE;
@@ -114,8 +154,6 @@ public final class BuildProfile
 
             for (ModuleTiming module : modules)
             {
-                durations.merge(module.module(), Long.valueOf(module.durationMillis()), Long::sum);
-
                 totalWork += module.durationMillis();
                 earliest = Math.min(earliest, module.startMillis());
                 latest = Math.max(latest, module.endMillis());
@@ -138,6 +176,18 @@ public final class BuildProfile
         }
     }
 
+    private Map<String, Long> durationsOf()
+    {
+        Map<String, Long> durations = new TreeMap<>();
+
+        for (ModuleTiming module : modules)
+        {
+            durations.merge(module.module(), Long.valueOf(module.durationMillis()), Long::sum);
+        }
+
+        return durations;
+    }
+
     private static Concurrency concurrency(int lanes, long totalWork, long criticalPath)
     {
         if (lanes <= 1)
@@ -150,14 +200,4 @@ public final class BuildProfile
             : Concurrency.THREAD_STARVED;
     }
 
-    public List<ModuleTiming> getModulesByDuration()
-    {
-        synchronized (lock)
-        {
-            return modules
-                .stream()
-                .sorted(Comparator.comparingLong(ModuleTiming::durationMillis).reversed())
-                .toList();
-        }
-    }
 }

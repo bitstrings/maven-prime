@@ -1,5 +1,6 @@
 package org.bitstrings.idea.plugins.mavenprime.spy;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,8 @@ public final class SpyReporter
     private final Map<String, Long> projectStarts = new ConcurrentHashMap<String, Long>();
 
     private final Map<String, Long> mojoStarts = new ConcurrentHashMap<String, Long>();
+
+    private final Map<String, Long> downloadStarts = new ConcurrentHashMap<String, Long>();
 
     public SpyReporter(LineSink sink)
     {
@@ -115,12 +118,25 @@ public final class SpyReporter
         switch (event.getType())
         {
             case ARTIFACT_DOWNLOADING:
+                downloadStarts.put(downloadKey(event), Long.valueOf(clock.getAsLong()));
                 write(
                     SpyProtocol.encode(
                         SpyProtocol.ARTIFACT_DOWNLOADING,
                         coordinates(event.getArtifact()),
                         repositoryId(event.getRepository()),
                         repositoryUrl(event.getRepository())));
+                break;
+
+            case METADATA_DOWNLOADING:
+                downloadStarts.put(downloadKey(event), Long.valueOf(clock.getAsLong()));
+                break;
+
+            case ARTIFACT_DOWNLOADED:
+                writeDownloadTiming(event, SpyProtocol.ARTIFACT_DOWNLOADED);
+                break;
+
+            case METADATA_DOWNLOADED:
+                writeDownloadTiming(event, SpyProtocol.METADATA_DOWNLOADED);
                 break;
 
             case ARTIFACT_RESOLVED:
@@ -254,7 +270,8 @@ public final class SpyReporter
                 SpyProtocol.PROJECT_TIMING,
                 key(event),
                 offset(started.longValue()),
-                duration(started.longValue())));
+                duration(started.longValue()),
+                worker()));
     }
 
     private void writeMojoTiming(ExecutionEvent event)
@@ -273,7 +290,28 @@ public final class SpyReporter
                 goal(event),
                 executionId(event),
                 offset(started.longValue()),
-                duration(started.longValue())));
+                duration(started.longValue()),
+                phase(event),
+                worker()));
+    }
+
+    private void writeDownloadTiming(RepositoryEvent event, String type)
+    {
+        Long started = downloadStarts.remove(downloadKey(event));
+
+        if (started == null)
+        {
+            return;
+        }
+
+        write(
+            SpyProtocol.encode(
+                type,
+                subjectOf(event),
+                repositoryId(event.getRepository()),
+                offset(started.longValue()),
+                duration(started.longValue()),
+                String.valueOf(sizeOf(event))));
     }
 
     private void writeDiagnostics(ExecutionEvent event)
@@ -393,6 +431,30 @@ public final class SpyReporter
         return key(event) + KEY_SEPARATOR + goal(event) + KEY_SEPARATOR + executionId(event);
     }
 
+    static String downloadKey(RepositoryEvent event)
+    {
+        return subjectOf(event) + KEY_SEPARATOR + repositoryId(event.getRepository());
+    }
+
+    static String subjectOf(RepositoryEvent event)
+    {
+        return (event.getArtifact() == null)
+            ? metadataCoordinates(event.getMetadata())
+            : coordinates(event.getArtifact());
+    }
+
+    static long sizeOf(RepositoryEvent event)
+    {
+        File file = event.getFile();
+
+        if ((file == null) && (event.getArtifact() != null))
+        {
+            file = event.getArtifact().getFile();
+        }
+
+        return ((file == null) || !file.isFile()) ? 0L : file.length();
+    }
+
     static String key(ExecutionEvent event)
     {
         MavenProject project = event.getProject();
@@ -482,6 +544,20 @@ public final class SpyReporter
         }
 
         return execution.getExecutionId();
+    }
+
+    private static String phase(ExecutionEvent event)
+    {
+        MojoExecution execution = event.getMojoExecution();
+
+        return (execution == null) ? "" : nullToEmpty(execution.getLifecyclePhase());
+    }
+
+    // Maven renames the pooled builder thread after the project it is running, so the name identifies
+    // the module rather than the worker. The id survives the rename, and SpyReporterTest pins it.
+    private static String worker()
+    {
+        return String.valueOf(Thread.currentThread().getId());
     }
 
     private static String failure(ExecutionEvent event)

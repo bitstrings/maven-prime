@@ -3,13 +3,17 @@ package org.bitstrings.idea.plugins.mavenprime.toolwindow;
 import java.awt.Container;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import javax.swing.Icon;
 import javax.swing.JTable;
 import javax.swing.JTree;
 import javax.swing.JViewport;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -20,8 +24,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfile;
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfileSummary;
-import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileGroup;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileGrouping;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileGroups;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileView;
+import org.bitstrings.idea.plugins.mavenprime.profile.WorkerLanes;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.treeView.TreeState;
@@ -54,6 +62,10 @@ public final class ProfileTable
 
     private final transient DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 
+    private transient ProfileGrouping grouping = ProfileGrouping.MODULE;
+
+    private transient WorkerLanes lanes = WorkerLanes.of(List.of());
+
     private transient boolean columnsSized;
 
     private transient int nameWidth;
@@ -66,17 +78,14 @@ public final class ProfileTable
 
     private transient Consumer<String> onModuleSelected = module -> { };
 
+    private final transient TreeSelectionListener selectionListener =
+        event -> onModuleSelected.accept(selectedModule());
+
     public ProfileTable()
     {
         super(new ListTreeTableModelOnColumns(new DefaultMutableTreeNode(), new ColumnInfo<?, ?>[0]));
 
-        setModel(new ListTreeTableModelOnColumns(root, columns()));
-
-        setRootVisible(false);
-        setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        getTree().setShowsRootHandles(true);
-        getTree().addTreeSelectionListener(event -> onModuleSelected.accept(selectedModule()));
-        setTreeCellRenderer(new TimingRenderer());
+        installModel();
     }
 
     public void setOnModuleSelected(Consumer<String> listener)
@@ -200,9 +209,7 @@ public final class ProfileTable
     {
         for (int row = 0; row < getTree().getRowCount(); row++)
         {
-            TreePath path = getTree().getPathForRow(row);
-
-            if (isModuleRow(path, module))
+            if (module.equals(moduleOf(getTree().getPathForRow(row))))
             {
                 setRowSelectionInterval(row, row);
 
@@ -213,13 +220,6 @@ public final class ProfileTable
         }
     }
 
-    private static boolean isModuleRow(TreePath path, String module)
-    {
-        Object timing = timingOf((DefaultMutableTreeNode) path.getLastPathComponent());
-
-        return (timing instanceof ModuleTiming) && ((ModuleTiming) timing).module().equals(module);
-    }
-
     private String selectedModule()
     {
         TreePath path = getTree().getSelectionPath();
@@ -227,44 +227,56 @@ public final class ProfileTable
         return (path == null) ? null : moduleOf(path);
     }
 
-    private static String moduleOf(TreePath path)
+    private String moduleOf(TreePath path)
     {
-        Object timing = timingOf((DefaultMutableTreeNode) path.getLastPathComponent());
+        Object row = rowOf((DefaultMutableTreeNode) path.getLastPathComponent());
 
-        if (timing instanceof ModuleTiming)
+        if (row instanceof MojoTiming mojo)
         {
-            return ((ModuleTiming) timing).module();
+            return mojo.module();
         }
 
-        return (timing instanceof MojoTiming) ? ((MojoTiming) timing).module() : null;
+        return ((row instanceof ProfileGroup group) && grouping.isByModule()) ? group.name() : null;
     }
 
-    public void setProfile(BuildProfile profile, BuildProfileSummary summary)
+    public void setProfile(BuildProfile profile, BuildProfileSummary summary, ProfileView view)
     {
         highlight(null);
 
         wallClockMillis = summary.wallClockMillis();
         criticalPath = Set.copyOf(summary.criticalPath());
+        lanes = profile.getWorkerLanes();
 
-        TreeState expansion = TreeState.createOn(getTree(), root);
+        boolean regrouped = grouping != view.grouping();
+
+        grouping = view.grouping();
+
+        TreeState expansion = regrouped ? null : TreeState.createOn(getTree(), root);
 
         root.removeAllChildren();
 
-        for (ModuleTiming module : profile.getModulesByDuration())
+        for (ProfileGroup group : ProfileGroups.of(profile, view))
         {
-            DefaultMutableTreeNode moduleNode = new DefaultMutableTreeNode(module);
+            DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(group);
 
-            for (MojoTiming mojo : profile.getMojos(module.module()))
+            for (MojoTiming mojo : group.mojos())
             {
-                moduleNode.add(new DefaultMutableTreeNode(mojo));
+                groupNode.add(new DefaultMutableTreeNode(mojo));
             }
 
-            root.add(moduleNode);
+            root.add(groupNode);
         }
 
-        ((ListTreeTableModelOnColumns) getTableModel()).reload();
+        if (regrouped)
+        {
+            installModel();
+        }
+        else
+        {
+            ((ListTreeTableModelOnColumns) getTableModel()).reload();
 
-        expansion.applyTo(getTree(), root);
+            expansion.applyTo(getTree(), root);
+        }
 
         if (!columnsSized)
         {
@@ -274,20 +286,60 @@ public final class ProfileTable
         repaint();
     }
 
-    private ColumnInfo<?, ?>[] columns()
+    private void installModel()
     {
-        return new ColumnInfo<?, ?>[]
-        {
-            new TreeColumnInfo(MavenPrimeBundle.message("mavenprime.profile.column.name")),
-            new TimingColumn(MavenPrimeBundle.message("mavenprime.profile.column.start"), true),
-            new TimingColumn(MavenPrimeBundle.message("mavenprime.profile.column.duration"), false),
-            new ShareColumn()
-        };
+        setModel(new ListTreeTableModelOnColumns(root, columns()));
+
+        setRootVisible(false);
+        setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        setTreeCellRenderer(new TimingRenderer());
+
+        getTree().setShowsRootHandles(true);
+        getTree().removeTreeSelectionListener(selectionListener);
+        getTree().addTreeSelectionListener(selectionListener);
+
+        columnsSized = false;
     }
 
-    private static Object timingOf(DefaultMutableTreeNode node)
+    private ColumnInfo<?, ?>[] columns()
+    {
+        List<ColumnInfo<?, ?>> columns = new ArrayList<>();
+
+        columns.add(new TreeColumnInfo(grouping.getColumnTitle()));
+        columns.add(
+            new TimingColumn(
+                MavenPrimeBundle.message("mavenprime.profile.column.start"),
+                "mavenprime.profile.help.column.start",
+                true));
+        columns.add(
+            new TimingColumn(
+                MavenPrimeBundle.message("mavenprime.profile.column.duration"),
+                "mavenprime.profile.help.column.duration",
+                false));
+        columns.add(new CountColumn());
+        columns.add(new ShareColumn());
+
+        if (grouping.isByModule())
+        {
+            columns.add(new PayoffColumn());
+        }
+
+        return columns.toArray(new ColumnInfo<?, ?>[0]);
+    }
+
+    private static Object rowOf(DefaultMutableTreeNode node)
     {
         return node.getUserObject();
+    }
+
+    private static long durationOf(Object row)
+    {
+        if (row instanceof ProfileGroup group)
+        {
+            return group.durationMillis();
+        }
+
+        return (row instanceof MojoTiming mojo) ? mojo.durationMillis() : -1L;
     }
 
     private final class TimingColumn
@@ -295,38 +347,63 @@ public final class ProfileTable
     {
         private final boolean start;
 
-        TimingColumn(String name, boolean start)
+        private final transient String helpKey;
+
+        TimingColumn(String name, String helpKey, boolean start)
         {
             super(name);
 
+            this.helpKey = helpKey;
             this.start = start;
+        }
+
+        @Override
+        public String getTooltipText()
+        {
+            return MavenPrimeBundle.message(helpKey);
         }
 
         @Override
         public String valueOf(DefaultMutableTreeNode node)
         {
-            Object timing = timingOf(node);
+            Object row = rowOf(node);
 
-            if (timing instanceof ModuleTiming)
+            if (row instanceof ProfileGroup group)
             {
-                ModuleTiming module = (ModuleTiming) timing;
-
-                return format(start ? module.startMillis() : module.durationMillis());
+                return Formats.formatDuration(start ? group.startMillis() : group.durationMillis());
             }
 
-            if (timing instanceof MojoTiming)
+            if (row instanceof MojoTiming mojo)
             {
-                MojoTiming mojo = (MojoTiming) timing;
-
-                return format(start ? mojo.startMillis() : mojo.durationMillis());
+                return Formats.formatDuration(start ? mojo.startMillis() : mojo.durationMillis());
             }
 
             return StringUtils.EMPTY;
         }
+    }
 
-        private String format(long millis)
+    private final class CountColumn
+        extends ColumnInfo<DefaultMutableTreeNode, String>
+    {
+        CountColumn()
         {
-            return Formats.formatDuration(millis);
+            super(MavenPrimeBundle.message("mavenprime.profile.column.goals"));
+        }
+
+        @Override
+        public String getTooltipText()
+        {
+            return MavenPrimeBundle.message("mavenprime.profile.help.column.goals");
+        }
+
+        @Override
+        public String valueOf(DefaultMutableTreeNode node)
+        {
+            Object row = rowOf(node);
+
+            return (row instanceof ProfileGroup group)
+                ? String.valueOf(group.mojos().size())
+                : StringUtils.EMPTY;
         }
     }
 
@@ -339,19 +416,51 @@ public final class ProfileTable
         }
 
         @Override
+        public String getTooltipText()
+        {
+            return MavenPrimeBundle.message("mavenprime.profile.help.column.share");
+        }
+
+        @Override
         public String valueOf(DefaultMutableTreeNode node)
         {
-            Object timing = timingOf(node);
-
-            long duration = (timing instanceof ModuleTiming)
-                ? ((ModuleTiming) timing).durationMillis()
-                : ((timing instanceof MojoTiming) ? ((MojoTiming) timing).durationMillis() : -1L);
+            long duration = durationOf(rowOf(node));
 
             return ((duration < 0L) || (wallClockMillis == 0L))
                 ? StringUtils.EMPTY
                 : MavenPrimeBundle.message(
                     "mavenprime.profile.share",
                     Double.valueOf((duration * PERCENT) / wallClockMillis));
+        }
+    }
+
+    private final class PayoffColumn
+        extends ColumnInfo<DefaultMutableTreeNode, String>
+    {
+        PayoffColumn()
+        {
+            super(MavenPrimeBundle.message("mavenprime.profile.column.payoff"));
+        }
+
+        @Override
+        public String getTooltipText()
+        {
+            return MavenPrimeBundle.message("mavenprime.profile.help.column.payoff");
+        }
+
+        @Override
+        public String valueOf(DefaultMutableTreeNode node)
+        {
+            Object row = rowOf(node);
+
+            if (!(row instanceof ProfileGroup group) || !group.hasPayoff())
+            {
+                return StringUtils.EMPTY;
+            }
+
+            return (group.payoffMillis() == 0L)
+                ? MavenPrimeBundle.message("mavenprime.profile.payoff.none")
+                : Formats.formatDuration(group.payoffMillis());
         }
     }
 
@@ -364,24 +473,25 @@ public final class ProfileTable
         public void customizeCellRenderer(
             JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean focus)
         {
-            Object timing = timingOf((DefaultMutableTreeNode) value);
+            Object node = rowOf((DefaultMutableTreeNode) value);
 
-            if (timing instanceof ModuleTiming)
+            if (node instanceof ProfileGroup group)
             {
-                showModule((ModuleTiming) timing);
+                showGroup(group);
             }
-            else if (timing instanceof MojoTiming)
+            else if (node instanceof MojoTiming mojo)
             {
-                showMojo((MojoTiming) timing);
+                showMojo(mojo);
             }
         }
 
-        private void showModule(ModuleTiming module)
+        private void showGroup(ProfileGroup group)
         {
-            boolean critical = criticalPath.contains(module.module());
+            boolean critical = grouping.isByModule() && criticalPath.contains(group.name());
+            String name = nameOf(group);
 
-            setIcon(critical ? AllIcons.Actions.Lightning : AllIcons.Nodes.Module);
-            append(module.module(), module.module().equals(highlighted) ? POINTED_AT : BOLD);
+            setIcon(critical ? AllIcons.Actions.Lightning : iconOf(grouping));
+            append(name, name.equals(highlighted) ? POINTED_AT : BOLD);
 
             if (critical)
             {
@@ -391,15 +501,58 @@ public final class ProfileTable
             }
         }
 
+        // A builder thread carries the name of whichever project it is running, so its id is the only
+        // stable identity, and an id is not something a reader can act on.
+        private String nameOf(ProfileGroup group)
+        {
+            int ordinal =
+                (grouping == ProfileGrouping.WORKER) ? lanes.ordinalOf(group.name()) : Integer.MIN_VALUE;
+
+            if (ordinal >= 0)
+            {
+                return MavenPrimeBundle.message(
+                    "mavenprime.profile.worker", Integer.valueOf(ordinal + 1));
+            }
+
+            return StringUtils.defaultIfBlank(
+                group.name(), MavenPrimeBundle.message("mavenprime.profile.group.none"));
+        }
+
         private void showMojo(MojoTiming mojo)
         {
             setIcon(AllIcons.Nodes.Method);
-            append(mojo.goal(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
 
+            if (grouping.isByModule())
+            {
+                append(mojo.goal(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
+                appendExecution(mojo);
+
+                return;
+            }
+
+            append(mojo.module(), SimpleTextAttributes.REGULAR_ATTRIBUTES);
+            append(' ' + mojo.goal(), SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES);
+            appendExecution(mojo);
+        }
+
+        private void appendExecution(MojoTiming mojo)
+        {
             if (StringUtils.isNotBlank(mojo.executionId()))
             {
                 append('@' + mojo.executionId(), SimpleTextAttributes.GRAYED_SMALL_ATTRIBUTES);
             }
+        }
+
+        private Icon iconOf(ProfileGrouping key)
+        {
+            return switch (key)
+            {
+                case MODULE -> AllIcons.Nodes.Module;
+                case PLUGIN -> AllIcons.Nodes.Artifact;
+                case GOAL -> AllIcons.Nodes.Method;
+                case PHASE -> AllIcons.Nodes.Folder;
+                case WORKER -> AllIcons.Debugger.Threads;
+            };
         }
     }
 }

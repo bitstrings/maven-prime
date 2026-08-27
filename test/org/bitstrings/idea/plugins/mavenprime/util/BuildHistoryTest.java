@@ -16,8 +16,8 @@ public class BuildHistoryTest
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty");
 
-        history.start("first", "one");
-        history.start("second", "two");
+        history.start("first", "", "one");
+        history.start("second", "", "two");
 
         assertEquals("two", history.getSelectedData());
     }
@@ -27,8 +27,8 @@ public class BuildHistoryTest
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty");
 
-        history.start("first", "one");
-        history.start("second", "two");
+        history.start("first", "", "one");
+        history.start("second", "", "two");
 
         assertEquals(2, history.getEntries().size());
     }
@@ -38,8 +38,8 @@ public class BuildHistoryTest
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty");
 
-        history.start("first", "one");
-        history.start("second", "two");
+        history.start("first", "", "one");
+        history.start("second", "", "two");
 
         assertTrue(history.select(history.getEntries().get(0)));
         assertEquals("one", history.getSelectedData());
@@ -50,7 +50,7 @@ public class BuildHistoryTest
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty");
 
-        history.start("only", "one");
+        history.start("only", "", "one");
 
         assertFalse(history.select(history.getEntries().get(0)));
     }
@@ -68,7 +68,7 @@ public class BuildHistoryTest
 
         for (int index = 0; index < 5; index++)
         {
-            history.start("build" + index, "data" + index);
+            history.start("build" + index, "", "data" + index);
         }
 
         assertEquals(
@@ -83,7 +83,7 @@ public class BuildHistoryTest
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty", () -> 0);
 
-        history.start("only", "data");
+        history.start("only", "", "data");
 
         assertEquals(
             "trimming to nothing removes from an empty list and throws before the run is recorded, so "
@@ -99,7 +99,7 @@ public class BuildHistoryTest
 
         for (int index = 0; index <= BuildHistory.DEFAULT_RETAINED; index++)
         {
-            history.start("build" + index, "data" + index);
+            history.start("build" + index, "", "data" + index);
         }
 
         List<BuildEntry<String>> entries = history.getEntries();
@@ -113,8 +113,8 @@ public class BuildHistoryTest
     {
         BuildHistory<String> history = new BuildHistory<>(() -> "empty");
 
-        history.start("first", "one");
-        history.start("second", "two");
+        history.start("first", "", "one");
+        history.start("second", "", "two");
         history.select(history.getEntries().get(0));
 
         assertFalse(history.isShowingLatest());

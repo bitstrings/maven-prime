@@ -45,6 +45,7 @@ public final class BuildSelector<T>
         available = builds.size();
 
         combo.setModel(new CollectionComboBoxModel<>(builds, selected));
+        combo.setToolTipText(goalsOf(selected));
 
         applyVisibility();
     }
@@ -63,7 +64,19 @@ public final class BuildSelector<T>
 
     private void reportSelection()
     {
-        onSelected.accept(combo.getItem());
+        BuildEntry<T> entry = combo.getItem();
+
+        combo.setToolTipText(goalsOf(entry));
+
+        onSelected.accept(entry);
+    }
+
+    // The goal line is as long as the user made it, so it is reachable rather than laid out.
+    public static String goalsOf(BuildEntry<?> entry)
+    {
+        return ((entry == null) || StringUtils.isBlank(entry.goals()))
+            ? null
+            : MavenPrimeBundle.message("mavenprime.build.goals", entry.goals());
     }
 
     static String labelOf(BuildEntry<?> entry)

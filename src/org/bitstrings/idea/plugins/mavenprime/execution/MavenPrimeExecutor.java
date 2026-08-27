@@ -120,7 +120,7 @@ public final class MavenPrimeExecutor
             return launch(new DaemonEngine(project).createSettings(effectiveRequest, installation), mode, callback);
         }
 
-        SpySession session = SpySession.timed(project, effectiveRequest.name, null);
+        SpySession session = SpySession.timed(project, effectiveRequest.name, effectiveRequest.getGoalLine(), null);
 
         try
         {

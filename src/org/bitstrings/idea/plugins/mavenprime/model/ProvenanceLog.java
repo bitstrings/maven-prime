@@ -44,9 +44,9 @@ public final class ProvenanceLog
         return project.getService(ProvenanceLog.class);
     }
 
-    public ProvenanceData startBuild(String name)
+    public ProvenanceData startBuild(String name, String goals)
     {
-        ProvenanceData data = history.start(name, new ProvenanceData());
+        ProvenanceData data = history.start(name, goals, new ProvenanceData());
 
         publish();
 

@@ -52,7 +52,8 @@ public final class SpySession
 
     private final AtomicBoolean finished = new AtomicBoolean();
 
-    private SpySession(Project project, SpyScope scope, String buildName, Consumer<String> additional)
+    private SpySession(
+        Project project, SpyScope scope, String buildName, String goals, Consumer<String> additional)
     {
         this.scope = scope;
         this.profiles = BuildProfileService.getInstance(project);
@@ -60,9 +61,10 @@ public final class SpySession
         this.provenances = ProvenanceLog.getInstance(project);
         this.buildName = StringUtils.defaultString(buildName);
         this.additional = additional;
-        this.profile = scope.isTimed() ? profiles.startBuild(buildName) : null;
-        this.resolutionData = scope.collectsResolution() ? resolutions.startBuild(buildName) : null;
-        this.provenanceData = provenances.startBuild(buildName);
+        this.profile = scope.isTimed() ? profiles.startBuild(buildName, goals) : null;
+        this.resolutionData =
+            scope.collectsResolution() ? resolutions.startBuild(buildName, goals) : null;
+        this.provenanceData = provenances.startBuild(buildName, goals);
 
         this.server = SpyServer.getInstance(project);
 
@@ -71,19 +73,20 @@ public final class SpySession
         Disposer.register(project, this);
     }
 
-    public static SpySession timed(Project project, String buildName, Consumer<String> additional)
+    public static SpySession timed(
+        Project project, String buildName, String goals, Consumer<String> additional)
     {
-        return new SpySession(project, SpyScope.BUILD, buildName, additional);
+        return new SpySession(project, SpyScope.BUILD, buildName, goals, additional);
     }
 
     public static SpySession untimed(Project project, String buildName)
     {
-        return new SpySession(project, SpyScope.MODEL, buildName, null);
+        return new SpySession(project, SpyScope.MODEL, buildName, StringUtils.EMPTY, null);
     }
 
-    static SpySession adopt(Project project, String buildName)
+    static SpySession adopt(Project project, String buildName, String goals)
     {
-        return new SpySession(project, SpyScope.BUILD, buildName, null);
+        return new SpySession(project, SpyScope.BUILD, buildName, goals, null);
     }
 
     public SpyHandshake handshake()

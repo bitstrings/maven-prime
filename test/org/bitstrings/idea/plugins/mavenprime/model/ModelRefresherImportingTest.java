@@ -37,7 +37,7 @@ public class ModelRefresherImportingTest
     {
         MavenPrimeSettings.getInstance(getProject()).autoRefresh = true;
 
-        ProvenanceLog.getInstance(getProject()).startBuild(getName());
+        ProvenanceLog.getInstance(getProject()).startBuild(getName(), "");
 
         assertTrue(
             "the fixture has to leave the read empty",

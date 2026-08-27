@@ -1,15 +1,18 @@
 package org.bitstrings.idea.plugins.mavenprime.toolwindow;
 
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfile;
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfileSummary;
+import org.bitstrings.idea.plugins.mavenprime.profile.DownloadSummary;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileFacts;
 import org.bitstrings.idea.plugins.mavenprime.ui.HintLabel;
 
@@ -17,6 +20,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
 import com.intellij.openapi.util.text.Formats;
+import com.intellij.ui.ContextHelpLabel;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.util.ui.FormBuilder;
@@ -29,7 +33,11 @@ public final class ProfileSummaryPopup
 
     static final int VISIBLE_STEPS = 12;
 
+    static final int VISIBLE_GAINS = 5;
+
     private static final int VERDICT_WIDTH = 420;
+
+    private static final int HELP_GAP = 4;
 
     private ProfileSummaryPopup()
     {
@@ -56,35 +64,57 @@ public final class ProfileSummaryPopup
 
         form.addComponent(section("mavenprime.profile.section.build"));
 
-        for (ProfileFacts.Fact fact : ProfileFacts.of(summary))
+        for (ProfileFacts.Fact fact : ProfileFacts.of(profile, summary))
         {
             form.addLabeledComponent(
                 MavenPrimeBundle.message(fact.measure().getBundleKey()),
-                new JBLabel(Formats.formatDuration(fact.millis())));
+                explained(Formats.formatDuration(fact.millis()), fact.measure().getHelpKey()));
         }
 
-        form.addLabeledComponent(
-            MavenPrimeBundle.message("mavenprime.profile.measure.parallelism"),
-            new JBLabel(
-                MavenPrimeBundle.message(
-                    "mavenprime.profile.parallelism",
-                    Double.valueOf(summary.achievedParallelism()),
-                    Double.valueOf(summary.availableParallelism()))));
-        form.addLabeledComponent(
-            MavenPrimeBundle.message("mavenprime.profile.measure.atOnce"),
-            new JBLabel(String.valueOf(summary.laneCount())));
+        if (ranSeveralModules(profile))
+        {
+            form.addLabeledComponent(
+                MavenPrimeBundle.message("mavenprime.profile.measure.parallelism"),
+                explained(
+                    MavenPrimeBundle.message(
+                        "mavenprime.profile.parallelism",
+                        Double.valueOf(summary.achievedParallelism()),
+                        Double.valueOf(summary.availableParallelism())),
+                    "mavenprime.profile.help.parallelism"));
+            form.addLabeledComponent(
+                MavenPrimeBundle.message("mavenprime.profile.measure.atOnce"),
+                explained(String.valueOf(summary.laneCount()), "mavenprime.profile.help.atOnce"));
+        }
 
         form.addComponent(verdict(summary));
 
-        if (summary.criticalPath().isEmpty())
+        addDownloads(form, profile);
+
+        // A single module is its own critical path and its own best saving, so both sections would
+        // restate the wall clock the reader has already read twice above.
+        List<ProfileFacts.Step> steps =
+            (summary.criticalPath().size() < 2)
+                ? List.of()
+                : ProfileFacts.criticalPath(profile, summary);
+        List<ProfileFacts.Gain> gains =
+            ranSeveralModules(profile) ? ProfileFacts.gains(profile, summary, VISIBLE_GAINS) : List.of();
+
+        int rowHeight = addCriticalPath(form, steps);
+
+        addGains(form, gains);
+
+        return scrollerOver(form.getPanel(), steps.size() + gains.size(), rowHeight);
+    }
+
+    private static int addCriticalPath(FormBuilder form, List<ProfileFacts.Step> steps)
+    {
+        if (steps.isEmpty())
         {
-            return new JBScrollPane(form.getPanel());
+            return 0;
         }
 
         form.addSeparator();
         form.addComponent(section("mavenprime.profile.section.criticalPath"));
-
-        List<ProfileFacts.Step> steps = ProfileFacts.criticalPath(profile, summary);
 
         int rowHeight = 0;
 
@@ -100,7 +130,84 @@ public final class ProfileSummaryPopup
             form.addLabeledComponent(stepName(step), timing);
         }
 
-        return scrollerOver(form.getPanel(), steps.size(), rowHeight);
+        return rowHeight;
+    }
+
+    private static boolean ranSeveralModules(BuildProfile profile)
+    {
+        return profile.getModules().size() > 1;
+    }
+
+    private static JComponent explained(String value, String helpKey)
+    {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, JBUI.scale(HELP_GAP), 0));
+
+        row.setOpaque(false);
+        row.add(new JBLabel(value));
+        row.add(ContextHelpLabel.create(MavenPrimeBundle.message(helpKey)));
+
+        return row;
+    }
+
+    private static void addDownloads(FormBuilder form, BuildProfile profile)
+    {
+        DownloadSummary downloads = profile.summarizeDownloads();
+
+        if (downloads.isEmpty())
+        {
+            return;
+        }
+
+        form.addSeparator();
+        form.addComponent(section("mavenprime.profile.section.downloads"));
+        form.addLabeledComponent(
+            MavenPrimeBundle.message("mavenprime.profile.measure.downloading"),
+            explained(
+                Formats.formatDuration(downloads.wallClockMillis()),
+                "mavenprime.profile.help.downloading"));
+        form.addLabeledComponent(
+            MavenPrimeBundle.message("mavenprime.profile.measure.transferred"),
+            explained(
+                MavenPrimeBundle.message(
+                    "mavenprime.profile.transferred",
+                    Formats.formatFileSize(downloads.bytes()),
+                    Integer.valueOf(downloads.count())),
+                "mavenprime.profile.help.transferred"));
+    }
+
+    private static void addGains(FormBuilder form, List<ProfileFacts.Gain> gains)
+    {
+        if (gains.isEmpty())
+        {
+            return;
+        }
+
+        form.addSeparator();
+        form.addComponent(section("mavenprime.profile.section.gains"));
+
+        for (ProfileFacts.Gain gain : gains)
+        {
+            form.addLabeledComponent(gainName(gain), gainTiming(gain));
+        }
+    }
+
+    private static JComponent gainName(ProfileFacts.Gain gain)
+    {
+        JBLabel name =
+            new JBLabel(shortNameOf(gain.module()), AllIcons.Actions.Rerun, SwingConstants.LEADING);
+
+        name.setToolTipText(gain.module());
+
+        return name;
+    }
+
+    private static JComponent gainTiming(ProfileFacts.Gain gain)
+    {
+        return new JBLabel(
+            MavenPrimeBundle.message(
+                "mavenprime.profile.stepTiming",
+                Formats.formatDuration(gain.millis()),
+                Double.valueOf(gain.sharePercent())));
     }
 
     private static JComponent scrollerOver(JComponent form, int stepCount, int rowHeight)

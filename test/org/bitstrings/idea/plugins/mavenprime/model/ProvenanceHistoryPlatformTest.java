@@ -15,8 +15,8 @@ public class ProvenanceHistoryPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("first"));
-        log.startBuild(buildNamed("second"));
+        log.startBuild(buildNamed("first"), "");
+        log.startBuild(buildNamed("second"), "");
 
         assertTrue(
             "every recorded build has to be reachable from the selector",
@@ -27,7 +27,7 @@ public class ProvenanceHistoryPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("only"));
+        log.startBuild(buildNamed("only"), "");
 
         assertEquals(buildNamed("only"), log.getSelectedBuild().name());
     }
@@ -36,11 +36,11 @@ public class ProvenanceHistoryPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("earlier")).accept(origin("core", "commons-io"));
+        log.startBuild(buildNamed("earlier"), "").accept(origin("core", "commons-io"));
 
         BuildEntry<ProvenanceData> earlier = log.getSelectedBuild();
 
-        log.startBuild(buildNamed("newer"));
+        log.startBuild(buildNamed("newer"), "");
 
         log.select(earlier);
 
@@ -51,8 +51,8 @@ public class ProvenanceHistoryPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        log.startBuild(buildNamed("earlier")).accept(origin("core", "commons-io"));
-        log.startBuild(buildNamed("newer"));
+        log.startBuild(buildNamed("earlier"), "").accept(origin("core", "commons-io"));
+        log.startBuild(buildNamed("newer"), "");
 
         assertEquals(
             "starting a build selects it, so the panel shows that build and not the one before it",

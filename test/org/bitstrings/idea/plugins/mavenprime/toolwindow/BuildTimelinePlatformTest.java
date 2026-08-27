@@ -17,9 +17,12 @@ import javax.swing.JViewport;
 import javax.swing.table.TableColumn;
 import javax.swing.tree.DefaultMutableTreeNode;
 
+import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
 import org.bitstrings.idea.plugins.mavenprime.profile.BuildProfile;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileGroup;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileView;
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
@@ -194,13 +197,45 @@ public class BuildTimelinePlatformTest
         return timeline;
     }
 
+    public void testGetToolTipText_aBuildThatRecordedNoWorkers_namesNoWorkerOnTheBar()
+    {
+        BuildTimeline timeline = timelineShowingOneModule();
+
+        assertFalse(
+            "the lanes were packed from overlapping spans, so a worker number here is invented",
+            tooltipAt(timeline, pointOnTheBar(timeline))
+                .contains(MavenPrimeBundle.message("mavenprime.profile.worker", Integer.valueOf(1))));
+    }
+
+    public void testGetToolTipText_aBuildThatRecordedItsWorkers_namesTheWorkerOnTheBar()
+    {
+        BuildTimeline timeline = new BuildTimeline();
+
+        BuildProfile profile = new BuildProfile();
+
+        profile.accept(new ModuleTiming(MODULE, 0L, 100L, "17"));
+
+        timeline.setProfile(profile, Set.of());
+        timeline.setSize(WIDTH, HEIGHT);
+
+        assertTrue(
+            tooltipAt(timeline, pointOnTheBar(timeline))
+                .contains(MavenPrimeBundle.message("mavenprime.profile.worker", Integer.valueOf(1))));
+    }
+
+    private static String tooltipAt(BuildTimeline timeline, Point point)
+    {
+        return String.valueOf(
+            timeline.getToolTipText(mouseEvent(timeline, MouseEvent.MOUSE_MOVED, point)));
+    }
+
     private static ProfileTable tableShowingOneModule()
     {
         ProfileTable table = new ProfileTable();
 
         BuildProfile profile = profileWithOneModule();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         return table;
     }
@@ -328,7 +363,7 @@ public class BuildTimelinePlatformTest
     {
         ProfileTable table = new ProfileTable();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         return table;
     }
@@ -392,7 +427,7 @@ public class BuildTimelinePlatformTest
     {
         Object node = table.getTree().getSelectionPath().getLastPathComponent();
 
-        return ((ModuleTiming) ((DefaultMutableTreeNode) node).getUserObject()).module();
+        return ((ProfileGroup) ((DefaultMutableTreeNode) node).getUserObject()).name();
     }
 
     private static Point pointOnTheBar(BuildTimeline timeline)
@@ -429,7 +464,7 @@ public class BuildTimelinePlatformTest
 
         ProfileTable table = new ProfileTable();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         assertTrue(
             "the duration column sized to its header and ignored the cell it has to fit: " + headerSized
@@ -445,7 +480,7 @@ public class BuildTimelinePlatformTest
 
         BuildProfile profile = profileWithOneModule();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         assertEquals(
             "re-sizing the columns for every build throws away the width the user dragged them to",
@@ -477,7 +512,7 @@ public class BuildTimelinePlatformTest
 
         ProfileTable table = new ProfileTable();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         assertTrue(
             "a width measured from the visible rows of a collapsed tree never sees a mojo, so every "
@@ -493,15 +528,15 @@ public class BuildTimelinePlatformTest
         ProfileTable late = new ProfileTable();
 
         late.setFont(null);
-        late.setProfile(profile, profile.summarize());
+        late.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         late.setFont(FIXED_FONT);
-        late.setProfile(profile, profile.summarize());
+        late.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         ProfileTable reference = new ProfileTable();
 
         reference.setFont(FIXED_FONT);
-        reference.setProfile(profile, profile.summarize());
+        reference.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         assertEquals(
             "a latch spent before a font was resolvable leaves the timing columns at the JTable "
@@ -605,7 +640,7 @@ public class BuildTimelinePlatformTest
 
         ProfileTable table = new ProfileTable();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
 
         assertTrue(
             "a module column left at the JTable default clips every name in it: " + shortName + " vs "
@@ -646,7 +681,7 @@ public class BuildTimelinePlatformTest
 
         ProfileTable table = new ProfileTable();
 
-        table.setProfile(profile, profile.summarize());
+        table.setProfile(profile, profile.summarize(), ProfileView.defaults());
         table.getTree().expandRow(0);
 
         List<String> selected = new ArrayList<>();

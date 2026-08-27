@@ -27,7 +27,7 @@ public class ProvenanceReadSignalPlatformTest
 
     public void testStartBuild_aReadThatOnlyJustBegan_reportsNothingReadYet()
     {
-        ProvenanceLog.getInstance(getProject()).startBuild(getName());
+        ProvenanceLog.getInstance(getProject()).startBuild(getName(), "");
 
         UIUtil.dispatchAllInvocationEvents();
 
@@ -41,7 +41,7 @@ public class ProvenanceReadSignalPlatformTest
     {
         ProvenanceLog log = ProvenanceLog.getInstance(getProject());
 
-        log.startBuild(getName());
+        log.startBuild(getName(), "");
         log.buildFinished();
 
         UIUtil.dispatchAllInvocationEvents();
