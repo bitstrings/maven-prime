@@ -139,6 +139,41 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.2.0</b>
+      <ul>
+        <li>
+          <b>Profiler</b>: <b>Open in Editor</b> opens the profiler as an editor tab, where the timeline gets
+          the full width of the window instead of a narrow column beside your code.
+        </li>
+        <li>
+          Turn on <b>Report a build whose time can be recovered</b> and a build that could have been faster
+          says so when it finishes, with a link straight to the profiler. It is off until you turn it on, and
+          it stays quiet unless there are at least ten seconds and a fifth of the build to win back.
+        </li>
+        <li>
+          The verdict under the timeline no longer contradicts itself on a wide build. It used to say a build
+          ran 37 modules at once and, in the same sentence, that only 8 were allowed.
+        </li>
+        <li>
+          A build held back by its dependencies no longer shows the same number twice, once as time more
+          threads would win back and once as overhead.
+        </li>
+        <li>Large builds are no longer reported as measured only in part.</li>
+        <li>
+          <b>Model</b>: the value shown beside a <code>${property}</code> follows the POM. Change a version
+          property and the value moves with the next Maven reload, instead of staying on what it was the last
+          time the model was read.
+        </li>
+        <li>
+          The <b>Model</b> tab is marked when the POMs have changed since the model was read, so you can tell
+          from any tab that what it shows is behind.
+        </li>
+        <li>
+          <b>Settings</b>: choose how many past runs the Model, Profiler and Repository drop-downs keep.
+          Twenty, as before, unless you change it.
+        </li>
+      </ul>
+
       <b>1.1.2</b>
       <ul>
         <li>
