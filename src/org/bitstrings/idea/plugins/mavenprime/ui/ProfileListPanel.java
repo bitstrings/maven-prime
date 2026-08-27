@@ -78,7 +78,7 @@ public final class ProfileListPanel
         model.reload();
 
         tree.setVisibleRowCount(
-            Math.min(Math.max(root.getChildCount(), MIN_VISIBLE_ROWS), MAX_VISIBLE_ROWS));
+            Math.clamp(root.getChildCount(), MIN_VISIBLE_ROWS, MAX_VISIBLE_ROWS));
 
         selectProfile(wasSelected);
 

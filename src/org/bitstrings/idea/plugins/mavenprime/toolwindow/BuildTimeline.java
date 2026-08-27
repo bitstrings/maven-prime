@@ -303,7 +303,7 @@ public final class BuildTimeline
 
     private void setZoom(double requested)
     {
-        double clamped = Math.min(MAX_ZOOM, Math.max(FIT, requested));
+        double clamped = Math.clamp(requested, FIT, MAX_ZOOM);
 
         if (clamped == zoom)
         {

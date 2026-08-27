@@ -63,6 +63,6 @@ public record BuildProfileSummary(
 
     static long divideCeil(long value, long divisor)
     {
-        return (divisor <= 0L) ? value : (((value + divisor) - 1L) / divisor);
+        return (divisor <= 0L) ? value : Math.ceilDiv(value, divisor);
     }
 }
