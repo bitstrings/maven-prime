@@ -16,7 +16,8 @@
         <li><b>Tests</b> run and debugged through Maven, reported in the IDE test tree.</li>
         <li><b>Dependency Analyzer</b> on the tree the IDE already resolved: conflicts, every path, and why.</li>
         <li><b>Effective values inline</b>: every <code>${property}</code> and inherited version, in the POM.</li>
-        <li><b>Profiler</b>: the critical path of a parallel build, and whether raising <code>-T</code> helps.</li>
+        <li><b>Profiler</b>: which plugin, goal or module the build time went to, and which one is worth fixing.</li>
+        <li><b>Downloads</b>: how much of the build was the network, and which repository it waited on.</li>
         <li><b>Model</b>: every version, plugin and property beside the POM that really set it.</li>
         <li><b>Repository</b>: what is missing, half-downloaded or negatively cached in <code>~/.m2</code>.</li>
         <li><b>Build context</b> shared with your team, with your own machine always winning.</li>
@@ -70,10 +71,22 @@
 
       <h3>Know why the build is slow</h3>
       <p>
-        Per-module times tell you nothing about a parallel build. Maven Prime measures the build from the inside,
-        lays it out as a timeline with one lane per module that really ran at the same time, and gives you the
-        one answer you actually wanted: raise <code>-T</code> to this and save that much, or stop trying,
-        because these modules are the critical path.
+        Per-module times tell you nothing about a parallel build. Maven Prime measures the build from the inside
+        and lays it out as a timeline, one lane per build thread Maven really used, showing where a thread sat
+        with nothing to run and which module it was waiting for.
+      </p>
+      <p>
+        The same timings regroup by plugin, goal or lifecycle phase, so you can ask which plugin costs you the
+        most across the whole reactor instead of which single module was slowest. And every module carries what
+        the build would save if it took no time at all: a module off the critical path saves nothing however
+        long it took, so you stop optimising the one that was never the problem.
+      </p>
+
+      <h3>See what the build spent on the network</h3>
+      <p>
+        Maven prints a line per file and never a total, so the time a build waits on downloads is invisible.
+        Maven Prime totals it: how long the build was downloading, how much came down, and which repository it
+        came from. Against a cold local repository that can be almost the whole build.
       </p>
 
       <h3>Every <code>${property}</code> resolved, in the POM you are reading</h3>
@@ -139,6 +152,51 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.3.0</b>
+      <ul>
+        <li>
+          <b>Profiler</b>: the timings now group by <b>plugin</b>, <b>goal</b>, <b>phase</b> or <b>build
+          thread</b>, not only by module. Grouping by plugin answers what the old table could not ask: which
+          plugin costs you the most across the whole reactor, rather than which single module was slowest.
+          Sort by duration, by the order the build ran things in, or by name, and narrow the rows by typing.
+        </li>
+        <li>
+          <b>Worth speeding up</b>: each module now carries what the build would save if that module took no
+          time at all. A module off the critical path saves nothing however long it took, so the list stays
+          short even when the build does not, and you stop optimising the module that was never the problem.
+        </li>
+        <li>
+          <b>Downloads</b>: Maven prints a line per file and never a total, so the time a build spends
+          waiting on the network is invisible. The profiler now shows how long the build was downloading,
+          how much came down and which repository it came from. Against a cold local repository that can be
+          almost the whole build.
+        </li>
+        <li>
+          The timeline lanes are the build threads Maven really used, instead of a guess made from which
+          modules happened to overlap. Where a thread sat with nothing to run, the timeline draws the gap and
+          names the module it was waiting for.
+        </li>
+        <li>
+          <b>Where the Build Time Went</b> no longer repeats itself. A single-module build used to show the
+          same number on five rows and then advise running it with <code>-T 1</code> to bring six seconds
+          down to six seconds. Rows that add nothing are left out, and a thread count is suggested only where
+          more threads could actually help.
+        </li>
+        <li>
+          Every figure explains itself. Hover the <b>?</b> beside a number, or hover a column header, to find
+          out what Duration, Wall Clock or Payoff mean without leaving the tab.
+        </li>
+        <li>
+          Hover the profiler summary for the goals that produced the numbers you are reading, and the build
+          drop-down to tell one recorded run from another.
+        </li>
+        <li>
+          <b>Dependency Analyzer</b> opens with the tree and the paths side by side instead of one above the
+          other, which is the shape most screens have room for. The button that switches between the two now
+          says which layout it gives you.
+        </li>
+      </ul>
+
       <b>1.2.0</b>
       <ul>
         <li>
