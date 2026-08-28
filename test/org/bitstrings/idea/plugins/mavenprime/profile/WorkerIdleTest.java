@@ -98,7 +98,7 @@ public class WorkerIdleTest
 
     private static List<IdleGap> gapsOf(List<ModuleTiming> modules, Map<String, Set<String>> upstreams)
     {
-        return WorkerIdle.gaps(modules, WorkerLanes.of(modules), upstreams);
+        return WorkerIdle.gaps(modules, WorkerLanes.of(modules, List.of()), upstreams);
     }
 
     private static ModuleTiming module(String name, long start, long duration, String worker)

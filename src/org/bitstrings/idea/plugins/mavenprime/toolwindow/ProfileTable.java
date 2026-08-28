@@ -64,7 +64,7 @@ public final class ProfileTable
 
     private transient ProfileGrouping grouping = ProfileGrouping.MODULE;
 
-    private transient WorkerLanes lanes = WorkerLanes.of(List.of());
+    private transient WorkerLanes lanes = WorkerLanes.of(List.of(), List.of());
 
     private transient boolean columnsSized;
 

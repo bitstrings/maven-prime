@@ -124,6 +124,23 @@ public class ProfileTableGroupingPlatformTest
             MavenPrimeBundle.message("mavenprime.profile.group.none"), renderedNameAt(table, 0));
     }
 
+    public void testRenderer_groupedByWorkerOnABuildWhoseModulesNeverReportedIn_stillNumbersTheThread()
+    {
+        BuildProfile profile = new BuildProfile();
+
+        profile.accept(new MojoTiming(CORE, SUREFIRE, "default-test", 0L, 100L, "test", "31"));
+
+        ProfileTable table = new ProfileTable();
+
+        show(table, profile, ProfileGrouping.WORKER);
+
+        assertEquals(
+            "a cancelled build reports the goals it finished and no module timings, and the raw thread "
+                + "id is exactly what the reader must never be shown",
+            MavenPrimeBundle.message("mavenprime.profile.worker", Integer.valueOf(1)),
+            renderedNameAt(table, 0));
+    }
+
     public void testRenderer_aGoalUnderAPluginGroup_namesTheModuleItRanIn()
     {
         ProfileTable table = tableShowing(ProfileGrouping.PLUGIN);

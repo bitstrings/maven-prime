@@ -125,7 +125,7 @@ public final class BuildProfile
     {
         synchronized (lock)
         {
-            return WorkerLanes.of(modules);
+            return lanesOf();
         }
     }
 
@@ -133,8 +133,13 @@ public final class BuildProfile
     {
         synchronized (lock)
         {
-            return WorkerIdle.gaps(List.copyOf(modules), WorkerLanes.of(modules), upstreams);
+            return WorkerIdle.gaps(List.copyOf(modules), lanesOf(), upstreams);
         }
+    }
+
+    private WorkerLanes lanesOf()
+    {
+        return WorkerLanes.of(modules, mojos);
     }
 
     public BuildProfileSummary summarize()

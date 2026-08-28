@@ -6,16 +6,19 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.ModuleTiming;
+import org.bitstrings.idea.plugins.mavenprime.profile.ProfileEvent.MojoTiming;
 
 public record WorkerLanes(Map<String, Integer> laneByModule, List<String> workers)
 {
     private static final int NO_LANE = -1;
 
-    public static WorkerLanes of(List<ModuleTiming> modules)
+    public static WorkerLanes of(List<ModuleTiming> modules, List<MojoTiming> mojos)
     {
-        return allNamed(modules)
-            ? byWorker(modules)
-            : new WorkerLanes(ReactorLanes.assign(modules), List.of());
+        List<String> workers = rosterOf(modules, mojos);
+
+        return (workers.isEmpty() || !allNamed(modules))
+            ? new WorkerLanes(ReactorLanes.assign(modules), List.of())
+            : new WorkerLanes(lanesOf(modules, workers), workers);
     }
 
     public boolean isByWorker()
@@ -41,41 +44,51 @@ public record WorkerLanes(Map<String, Integer> laneByModule, List<String> worker
 
     private static boolean allNamed(List<ModuleTiming> modules)
     {
-        return !modules.isEmpty() && modules.stream().noneMatch(module -> StringUtils.isBlank(module.worker()));
+        return modules.stream().noneMatch(module -> StringUtils.isBlank(module.worker()));
     }
 
-    private static WorkerLanes byWorker(List<ModuleTiming> modules)
+    // A cancelled build reports the goals it finished and no module timings, so a roster read from
+    // modules alone leaves ordinalOf nothing to number and the raw thread id reaches the reader.
+    // ProfileTableGroupingPlatformTest pins the label.
+    private static List<String> rosterOf(List<ModuleTiming> modules, List<MojoTiming> mojos)
     {
         Map<String, Long> firstStart = new LinkedHashMap<>();
 
         for (ModuleTiming module : modules)
         {
-            firstStart.merge(module.worker(), Long.valueOf(module.startMillis()), Math::min);
+            claim(firstStart, module.worker(), module.startMillis());
         }
 
-        List<String> workers =
-            firstStart
-                .entrySet()
-                .stream()
-                .sorted(
-                    Map.Entry.<String, Long>comparingByValue().thenComparing(Map.Entry.comparingByKey()))
-                .map(Map.Entry::getKey)
-                .toList();
-
-        Map<String, Integer> laneByWorker = new LinkedHashMap<>();
-
-        for (int lane = 0; lane < workers.size(); lane++)
+        for (MojoTiming mojo : mojos)
         {
-            laneByWorker.put(workers.get(lane), Integer.valueOf(lane));
+            claim(firstStart, mojo.worker(), mojo.startMillis());
         }
 
+        return firstStart
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().thenComparing(Map.Entry.comparingByKey()))
+            .map(Map.Entry::getKey)
+            .toList();
+    }
+
+    private static void claim(Map<String, Long> firstStart, String worker, long startMillis)
+    {
+        if (StringUtils.isNotBlank(worker))
+        {
+            firstStart.merge(worker, Long.valueOf(startMillis), Math::min);
+        }
+    }
+
+    private static Map<String, Integer> lanesOf(List<ModuleTiming> modules, List<String> workers)
+    {
         Map<String, Integer> laneByModule = new LinkedHashMap<>();
 
         for (ModuleTiming module : modules)
         {
-            laneByModule.put(module.module(), laneByWorker.get(module.worker()));
+            laneByModule.put(module.module(), Integer.valueOf(workers.indexOf(module.worker())));
         }
 
-        return new WorkerLanes(Map.copyOf(laneByModule), workers);
+        return Map.copyOf(laneByModule);
     }
 }
