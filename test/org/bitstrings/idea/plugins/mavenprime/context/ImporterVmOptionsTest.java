@@ -135,6 +135,16 @@ public class ImporterVmOptionsTest
     }
 
     @Test
+    public void merge_theUserTypedTheSameOptionAheadOfOurs_removesOursAndLeavesTheirs()
+    {
+        assertEquals(
+            "the region is always appended, so an earlier identical token is the user's own and "
+                + "removing it strands ours in their field for good",
+            "-Denv=ci -Xmx4g -Denv=qa",
+            ImporterVmOptions.merge("-Denv=ci -Xmx4g -Denv=ci", "-Denv=ci", "-Denv=qa"));
+    }
+
+    @Test
     public void stripLegacy_aFieldWithoutMarkers_isReturnedUntouched()
     {
         String untidy = "  -Xmx4g   -Xms1g  ";

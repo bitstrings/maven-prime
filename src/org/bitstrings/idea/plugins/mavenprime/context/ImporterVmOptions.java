@@ -62,7 +62,7 @@ public final class ImporterVmOptions
 
     private static void remove(List<String> tokens, List<String> written)
     {
-        int at = indexOf(tokens, written);
+        int at = lastIndexOf(tokens, written);
 
         if (at >= 0)
         {
@@ -70,14 +70,16 @@ public final class ImporterVmOptions
         }
     }
 
-    private static int indexOf(List<String> tokens, List<String> written)
+    // merge appends, so only the trailing match is ours. Taking the first strands our token in the
+    // user's field for good, and ImporterVmOptionsTest pins which one goes.
+    private static int lastIndexOf(List<String> tokens, List<String> written)
     {
         if (written.isEmpty())
         {
             return -1;
         }
 
-        for (int start = 0; start <= (tokens.size() - written.size()); start++)
+        for (int start = tokens.size() - written.size(); start >= 0; start--)
         {
             if (tokens.subList(start, start + written.size()).equals(written))
             {
