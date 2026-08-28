@@ -67,7 +67,7 @@ public final class DownloadTable
                 total -> Formats.formatDuration(total.transferMillis()),
                 Comparator.comparingLong(RepositoryTotal::transferMillis)),
             new TotalColumn(
-                "share", this::shareOf, Comparator.comparingLong(RepositoryTotal::transferMillis))
+                "share", this::shareOf, Comparator.comparingLong(RepositoryTotal::wallClockMillis))
         };
     }
 
@@ -77,7 +77,7 @@ public final class DownloadTable
             ? StringUtils.EMPTY
             : MavenPrimeBundle.message(
                 "mavenprime.profile.share",
-                Double.valueOf((total.transferMillis() * PERCENT) / wallClockMillis));
+                Double.valueOf((total.wallClockMillis() * PERCENT) / wallClockMillis));
     }
 
     private static String nameOf(RepositoryTotal total)

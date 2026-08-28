@@ -55,6 +55,20 @@ public class DownloadTablePlatformTest
         assertEquals("1", valueAt(tableShowing(summary), 0, FILES_COLUMN));
     }
 
+    public void testSetSummary_aRepositoryWhoseTransfersRanSideBySide_countsTheOverlapOnce()
+    {
+        DownloadSummary summary =
+            DownloadSummary.of(
+                List.of(
+                    download(CENTRAL, 0L, 500L), download(CENTRAL, 0L, 500L), download(CENTRAL, 0L, 500L)));
+
+        assertEquals(
+            "adding overlapping transfers together and dividing by the wall clock reports a repository "
+                + "as costing more of the build than the build lasted",
+            MavenPrimeBundle.message("mavenprime.profile.share", Double.valueOf(50.0D)),
+            valueAt(tableShowing(summary), 0, SHARE_COLUMN));
+    }
+
     public void testSetSummary_aBuildThatDownloadedNothing_showsNoRows()
     {
         assertEquals(0, tableShowing(DownloadSummary.empty()).getRowCount());

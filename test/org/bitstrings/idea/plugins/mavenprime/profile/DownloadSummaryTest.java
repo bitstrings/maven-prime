@@ -39,6 +39,20 @@ public class DownloadSummaryTest
     }
 
     @Test
+    public void of_transfersRunningAtTheSameTime_reportsTheStretchOneRepositoryHeldTheWire()
+    {
+        DownloadSummary summary =
+            DownloadSummary.of(
+                List.of(download(CENTRAL, 0L, 100L, 10L), download(CENTRAL, 50L, 100L, 10L)));
+
+        assertEquals(
+            "a repository cannot have held the wire longer than the build ran, so the share this feeds "
+                + "has to come from the union rather than the sum",
+            150L,
+            summary.repositories().get(0).wallClockMillis());
+    }
+
+    @Test
     public void of_transfersFromTwoRepositories_leadsWithTheOneThatCostTheMost()
     {
         DownloadSummary summary =

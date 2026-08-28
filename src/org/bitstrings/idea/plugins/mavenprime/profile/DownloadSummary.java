@@ -63,6 +63,7 @@ public record DownloadSummary(
             downloads.size(),
             (int) downloads.stream().filter(download -> download.kind() == DownloadKind.METADATA).count(),
             downloads.stream().mapToLong(DownloadTiming::durationMillis).sum(),
+            unionMillis(downloads),
             downloads.stream().mapToLong(DownloadTiming::bytes).sum());
     }
 
@@ -107,7 +108,12 @@ public record DownloadSummary(
     }
 
     public record RepositoryTotal(
-        String repository, int count, int metadataCount, long transferMillis, long bytes)
+        String repository,
+        int count,
+        int metadataCount,
+        long transferMillis,
+        long wallClockMillis,
+        long bytes)
     {
     }
 
