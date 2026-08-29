@@ -83,6 +83,19 @@ public final class MavenProjects
                 });
     }
 
+    public static MavenProject byPomFile(Project project, VirtualFile file)
+    {
+        if (file == null)
+        {
+            return null;
+        }
+
+        return ApplicationManager
+            .getApplication()
+            .runReadAction(
+                (Computable<MavenProject>) () -> MavenProjectsManager.getInstance(project).findProject(file));
+    }
+
     public static MavenProject forModule(Project project, Module module)
     {
         return (module == null) ? null : MavenProjectsManager.getInstance(project).findProject(module);

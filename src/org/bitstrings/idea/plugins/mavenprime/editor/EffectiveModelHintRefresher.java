@@ -60,7 +60,7 @@ public final class EffectiveModelHintRefresher
 
     private boolean isPom(VirtualFile file)
     {
-        MavenProject module = MavenProjects.forFile(project, file);
+        MavenProject module = MavenProjects.byPomFile(project, file);
 
         return (module != null) && file.equals(module.getFile());
     }

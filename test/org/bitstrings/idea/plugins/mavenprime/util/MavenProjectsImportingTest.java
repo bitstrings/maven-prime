@@ -67,6 +67,34 @@ public class MavenProjectsImportingTest
         assertEquals("core", resolved.get(TIMEOUT_SECONDS, TimeUnit.SECONDS).getMavenId().getArtifactId());
     }
 
+    public void testByPomFile_pomOfAnImportedModule_resolvesThatModule()
+    {
+        importProject(PARENT_POM);
+
+        MavenProject resolved = MavenProjects.byPomFile(getProject(), getProjectPom());
+
+        assertNotNull(resolved);
+        assertEquals("parent", resolved.getMavenId().getArtifactId());
+    }
+
+    public void testByPomFile_sourceFileInsideAModule_resolvesNothing()
+        throws Exception
+    {
+        createModulePom("core", MODULE_POM);
+        importProject(PARENT_POM);
+
+        VirtualFile source = createProjectSubFile("core/src/main/java/Sample.java", "class Sample {}");
+
+        assertNull(MavenProjects.byPomFile(getProject(), source));
+    }
+
+    public void testByPomFile_nullFile_resolvesNothing()
+    {
+        importProject(PARENT_POM);
+
+        assertNull(MavenProjects.byPomFile(getProject(), null));
+    }
+
     public void testAllProfiles_pomDeclaringProfiles_listsThem()
     {
         importProject(
