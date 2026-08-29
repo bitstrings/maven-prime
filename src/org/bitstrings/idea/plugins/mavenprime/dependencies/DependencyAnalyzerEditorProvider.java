@@ -18,7 +18,7 @@ public final class DependencyAnalyzerEditorProvider
     @Override
     public boolean accept(Project project, VirtualFile file)
     {
-        MavenProject mavenProject = MavenProjects.forFile(project, file);
+        MavenProject mavenProject = MavenProjects.byPomFile(project, file);
 
         return (mavenProject != null) && file.equals(mavenProject.getFile());
     }

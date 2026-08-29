@@ -77,9 +77,9 @@ public final class MavenProjects
                 {
                     MavenProjectsManager manager = MavenProjectsManager.getInstance(project);
 
-                    MavenProject containing = manager.findContainingProject(file);
+                    MavenProject own = manager.findProject(file);
 
-                    return (containing != null) ? containing : manager.findProject(file);
+                    return (own != null) ? own : manager.findContainingProject(file);
                 });
     }
 

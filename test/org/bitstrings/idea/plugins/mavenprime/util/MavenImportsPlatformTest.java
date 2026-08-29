@@ -48,7 +48,6 @@ public class MavenImportsPlatformTest
         assertEquals("a disposed panel must not be refreshed by a later import", 0, runs.get());
     }
 
-
     private void publishImportFinished()
     {
         getProject()

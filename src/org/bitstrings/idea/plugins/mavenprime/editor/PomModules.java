@@ -33,7 +33,7 @@ final class PomModules
             return null;
         }
 
-        MavenProject module = MavenProjects.forFile(project, pom);
+        MavenProject module = MavenProjects.byPomFile(project, pom);
 
         return ((module != null) && pom.equals(module.getFile())) ? module : null;
     }

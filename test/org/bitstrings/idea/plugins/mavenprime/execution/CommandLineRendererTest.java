@@ -101,7 +101,6 @@ public class CommandLineRendererTest
         assertTrue(CommandLineRenderer.renderSettingsFile("  ").isEmpty());
     }
 
-
     @Test
     public void renderRawOptions_quotedArgument_keepsItAsOneArgument()
     {

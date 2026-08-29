@@ -260,7 +260,7 @@ public final class DependencyAnalyzerPanel
 
     public void refresh()
     {
-        mavenProject = MavenProjects.forFile(project, file);
+        mavenProject = MavenProjects.byPomFile(project, file);
         analysis = DependencyAnalysis.of(mavenProject);
 
         primeSizes();
@@ -594,7 +594,6 @@ public final class DependencyAnalyzerPanel
 
         state.applyTo(tree, root);
     }
-
 
     private void showSummary()
     {

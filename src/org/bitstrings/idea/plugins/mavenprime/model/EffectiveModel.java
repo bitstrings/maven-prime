@@ -10,12 +10,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent.DependencyOrigin;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent.PluginOrigin;
 import org.bitstrings.idea.plugins.mavenprime.model.ProvenanceEvent.PropertyOrigin;
-import org.bitstrings.idea.plugins.mavenprime.util.MavenProjects;
 
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VirtualFile;
 
 @Service(Service.Level.PROJECT)
 public final class EffectiveModel
@@ -48,13 +46,6 @@ public final class EffectiveModel
     @Override
     public void dispose()
     {
-    }
-
-    public String moduleOf(VirtualFile pomFile)
-    {
-        return (pomFile == null)
-            ? StringUtils.EMPTY
-            : MavenProjects.moduleKeyOf(MavenProjects.forFile(project, pomFile));
     }
 
     public boolean hasDataFor(String module)

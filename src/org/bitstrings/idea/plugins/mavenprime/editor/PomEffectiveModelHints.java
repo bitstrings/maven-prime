@@ -62,7 +62,7 @@ public final class PomEffectiveModelHints
     {
         Project project = file.getProject();
 
-        MavenProject module = MavenProjects.forFile(project, file.getVirtualFile());
+        MavenProject module = MavenProjects.byPomFile(project, file.getVirtualFile());
 
         if (module == null)
         {
@@ -77,7 +77,8 @@ public final class PomEffectiveModelHints
         {
             ApplicationManager
                 .getApplication()
-                .invokeLater(() -> ModelRefresher.getInstance(project).refreshUnread());
+                .invokeLater(
+                    () -> ModelRefresher.getInstance(project).refreshUnread(), project.getDisposed());
         }
 
         return new Collector(new EffectiveModelHints(model, facts));

@@ -9,7 +9,6 @@ import org.jetbrains.idea.maven.dom.model.MavenDomPlugin;
 import org.jetbrains.idea.maven.dom.model.MavenDomProfile;
 import org.jetbrains.idea.maven.dom.model.MavenDomProjectModel;
 
-
 public final class PomPlugins
 {
     private PomPlugins()
