@@ -1,46 +1,42 @@
 package org.bitstrings.idea.plugins.mavenprime.execution;
 
+import java.util.Set;
+
 import org.bitstrings.idea.plugins.mavenprime.MavenPrimeBundle;
-import org.bitstrings.idea.plugins.mavenprime.distribution.MavenVersion;
+import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallation;
 
 public enum MavenFlag
 {
-    OFFLINE("offline", "-o", Support.ALWAYS),
-    UPDATE_SNAPSHOTS("updateSnapshots", "-U", Support.ALWAYS),
-    NO_SNAPSHOT_UPDATES("noSnapshotUpdates", "-nsu", Support.ALWAYS),
-    NON_RECURSIVE("nonRecursive", "-N", Support.ALWAYS),
-    ALSO_MAKE("alsoMake", "-am", Support.ALWAYS),
-    ALSO_MAKE_DEPENDENTS("alsoMakeDependents", "-amd", Support.ALWAYS),
-    SKIP_TESTS("skipTests", "-DskipTests", Support.ALWAYS),
-    SHOW_ERRORS("showErrors", "-e", Support.ALWAYS),
-    BATCH_MODE("batchMode", "-B", Support.ALWAYS),
-    NO_TRANSFER_PROGRESS("noTransferProgress", "-ntp", Support.ALWAYS),
-    STRICT_CHECKSUMS("strictChecksums", "-C", Support.ALWAYS),
-    LAX_CHECKSUMS("laxChecksums", "-c", Support.ALWAYS),
-    IGNORE_TRANSITIVE_REPOSITORIES("ignoreTransitiveRepositories", "-itr", Support.SINCE_MAVEN_3_9),
-    RESUME("resume", "-r", Support.MAVEN_4_OR_DAEMON),
+    OFFLINE("offline", "-o", Support.ADVERTISED),
+    UPDATE_SNAPSHOTS("updateSnapshots", "-U", Support.ADVERTISED),
+    NO_SNAPSHOT_UPDATES("noSnapshotUpdates", "-nsu", Support.ADVERTISED),
+    UPDATE_ARTIFACTS("updateArtifacts", "-UA", Support.ADVERTISED),
+    UPDATE_METADATA("updateMetadata", "-UM", Support.ADVERTISED),
+    NON_RECURSIVE("nonRecursive", "-N", Support.ADVERTISED),
+    ALSO_MAKE("alsoMake", "-am", Support.ADVERTISED),
+    ALSO_MAKE_DEPENDENTS("alsoMakeDependents", "-amd", Support.ADVERTISED),
+    SKIP_TESTS("skipTests", "-DskipTests", Support.PROPERTY),
+    SHOW_ERRORS("showErrors", "-e", Support.ADVERTISED),
+    BATCH_MODE("batchMode", "-B", Support.ADVERTISED),
+    NO_TRANSFER_PROGRESS("noTransferProgress", "-ntp", Support.ADVERTISED),
+    STRICT_CHECKSUMS("strictChecksums", "-C", Support.ADVERTISED),
+    LAX_CHECKSUMS("laxChecksums", "-c", Support.ADVERTISED),
+    IGNORE_TRANSITIVE_REPOSITORIES("ignoreTransitiveRepositories", "-itr", Support.ADVERTISED),
+    RESUME("resume", "-r", Support.ADVERTISED),
     NO_DAEMON("noDaemon", "-Dmvnd.noDaemon=true", Support.DAEMON_ONLY);
 
     public enum Support
     {
-        ALWAYS,
-        SINCE_MAVEN_3_9,
-        MAVEN_4_OR_DAEMON,
+        ADVERTISED,
+        PROPERTY,
         DAEMON_ONLY;
 
-        private static final int MAVEN_3_9_MAJOR = 3;
-
-        private static final int MAVEN_3_9_MINOR = 9;
-
-        private static final int MAVEN_4_MAJOR = 4;
-
-        public boolean isSupported(MavenVersion mavenVersion, boolean daemon)
+        public boolean isSupported(String option, Set<String> advertisedOptions, boolean daemon)
         {
             return switch (this)
             {
-                case ALWAYS -> true;
-                case SINCE_MAVEN_3_9 -> mavenVersion.isAtLeast(MAVEN_3_9_MAJOR, MAVEN_3_9_MINOR);
-                case MAVEN_4_OR_DAEMON -> daemon || mavenVersion.isAtLeast(MAVEN_4_MAJOR);
+                case ADVERTISED -> advertisedOptions.isEmpty() || advertisedOptions.contains(option);
+                case PROPERTY -> true;
                 case DAEMON_ONLY -> daemon;
             };
         }
@@ -74,8 +70,8 @@ public enum MavenFlag
         return MavenPrimeBundle.message("mavenprime.flag." + bundleKey + ".description");
     }
 
-    public boolean isSupportedBy(MavenVersion mavenVersion, boolean daemon)
+    public boolean isSupportedBy(MavenInstallation installation, Set<String> advertisedOptions)
     {
-        return support.isSupported(mavenVersion, daemon);
+        return support.isSupported(option, advertisedOptions, installation.isDaemon());
     }
 }

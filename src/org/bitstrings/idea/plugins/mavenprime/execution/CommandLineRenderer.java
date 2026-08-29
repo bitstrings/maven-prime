@@ -34,9 +34,10 @@ public final class CommandLineRenderer
     {
     }
 
-    public static RenderedCommandLine render(MavenPrimeRequest request, MavenInstallation installation)
+    public static RenderedCommandLine render(
+        MavenPrimeRequest request, MavenInstallation installation, Set<String> advertisedOptions)
     {
-        Set<MavenFlag> dropped = unsupportedFlags(request.flags, installation);
+        Set<MavenFlag> dropped = unsupportedFlags(request.flags, installation, advertisedOptions);
 
         List<MavenFlag> supported = new ArrayList<>(request.flags);
 
@@ -63,13 +64,14 @@ public final class CommandLineRenderer
         return options;
     }
 
-    public static Set<MavenFlag> unsupportedFlags(Collection<MavenFlag> flags, MavenInstallation installation)
+    public static Set<MavenFlag> unsupportedFlags(
+        Collection<MavenFlag> flags, MavenInstallation installation, Set<String> advertisedOptions)
     {
         Set<MavenFlag> unsupported = new LinkedHashSet<>();
 
         for (MavenFlag flag : flags)
         {
-            if (!flag.isSupportedBy(installation.getMavenVersion(), installation.isDaemon()))
+            if (!flag.isSupportedBy(installation, advertisedOptions))
             {
                 unsupported.add(flag);
             }

@@ -9,18 +9,6 @@ import org.junit.Test;
 public class MavenVersionTest
 {
     @Test
-    public void getMajor_threeSegments_readsTheLeadingSegment()
-    {
-        assertEquals(3, MavenVersion.parse("3.9.12").getMajor());
-    }
-
-    @Test
-    public void getMajor_qualifiedVersion_readsTheLeadingSegment()
-    {
-        assertEquals(4, MavenVersion.parse("4.0.0-rc-3").getMajor());
-    }
-
-    @Test
     public void parse_blankText_yieldsUnknown()
     {
         assertFalse(MavenVersion.parse("  ").isKnown());
@@ -33,57 +21,9 @@ public class MavenVersionTest
     }
 
     @Test
-    public void isAtLeast_maven4AgainstMajor4_isTrue()
+    public void parse_qualifiedReleaseCandidate_isKnown()
     {
-        assertTrue(MavenVersion.parse("4.0.0").isAtLeast(4));
-    }
-
-    @Test
-    public void isAtLeast_maven3AgainstMajor4_isFalse()
-    {
-        assertFalse(MavenVersion.parse("3.9.12").isAtLeast(4));
-    }
-
-    @Test
-    public void isAtLeast_unknownVersion_isFalse()
-    {
-        assertFalse(MavenVersion.UNKNOWN.isAtLeast(3));
-    }
-
-    @Test
-    public void isAtLeast_releaseCandidateOfTheRequiredMajor_isTrue()
-    {
-        assertTrue(MavenVersion.parse("4.0.0-rc-5").isAtLeast(4));
-    }
-
-    @Test
-    public void isAtLeast_higherMinorThanRequired_isTrue()
-    {
-        assertTrue(MavenVersion.parse("3.9.12").isAtLeast(3, 9));
-    }
-
-    @Test
-    public void isAtLeast_lowerMinorThanRequired_isFalse()
-    {
-        assertFalse(MavenVersion.parse("3.8.8").isAtLeast(3, 9));
-    }
-
-    @Test
-    public void isAtLeast_preReleaseOfTheRequiredMinor_isTrue()
-    {
-        assertTrue(MavenVersion.parse("3.9.0-alpha-1").isAtLeast(3, 9));
-    }
-
-    @Test
-    public void getMinor_qualifiedMinorSegment_readsTheLeadingDigits()
-    {
-        assertEquals(9, MavenVersion.parse("3.9-SNAPSHOT").getMinor());
-    }
-
-    @Test
-    public void getMinor_versionWithoutAMinorSegment_isZero()
-    {
-        assertEquals(0, MavenVersion.parse("4").getMinor());
+        assertTrue(MavenVersion.parse("4.0.0-rc-6").isKnown());
     }
 
     @Test

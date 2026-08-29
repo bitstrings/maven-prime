@@ -3,6 +3,7 @@ package org.bitstrings.idea.plugins.mavenprime.execution;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -349,7 +350,13 @@ public final class MavenPrimeExecutor
     {
         MavenVersion mavenVersion = installation.getMavenVersion();
 
-        for (MavenFlag flag : CommandLineRenderer.unsupportedFlags(request.flags, installation))
+        Set<MavenFlag> dropped =
+            CommandLineRenderer.unsupportedFlags(
+                request.flags,
+                installation,
+                MavenOptionCatalog.getInstance(project).optionsOf(installation, request.jreName));
+
+        for (MavenFlag flag : dropped)
         {
             MavenPrimeNotifications.warning(
                 project,

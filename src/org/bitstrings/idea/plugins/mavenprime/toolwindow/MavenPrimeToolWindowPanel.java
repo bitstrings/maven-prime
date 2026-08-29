@@ -22,6 +22,7 @@ import org.bitstrings.idea.plugins.mavenprime.distribution.DistributionSpec;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallation;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallationService;
 import org.bitstrings.idea.plugins.mavenprime.execution.ExecutionMode;
+import org.bitstrings.idea.plugins.mavenprime.execution.MavenOptionCatalog;
 import org.bitstrings.idea.plugins.mavenprime.execution.MavenPrimeExecutor;
 import org.bitstrings.idea.plugins.mavenprime.execution.MavenPrimeRequest;
 import org.bitstrings.idea.plugins.mavenprime.goals.GoalDefinition;
@@ -895,6 +896,8 @@ public final class MavenPrimeToolWindowPanel
         public void actionPerformed(AnActionEvent event)
         {
             MavenInstallationService.getInstance(project).invalidate();
+
+            MavenOptionCatalog.getInstance(project).invalidate();
 
             BuildContext.getInstance(project).forceReimport();
 

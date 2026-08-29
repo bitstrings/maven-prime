@@ -67,7 +67,13 @@ public final class MavenCommandLineBuilder
         commandLine.setCharset(StandardCharsets.UTF_8);
         commandLine.withParentEnvironmentType(GeneralCommandLine.ParentEnvironmentType.CONSOLE);
 
-        List<String> arguments = CommandLineRenderer.render(request, installation).getArguments();
+        List<String> arguments =
+            CommandLineRenderer
+                .render(
+                    request,
+                    installation,
+                    MavenOptionCatalog.getInstance(project).optionsOf(installation, request.jreName))
+                .getArguments();
 
         applyTerminal(commandLine, installation, MavenPrimeSettings.getInstance(project).colorConsole);
         applyJavaHome(commandLine, project, request.jreName, installation.isDaemon());

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.apache.commons.lang3.StringUtils;
@@ -196,9 +197,12 @@ public final class IdeaMavenEngine
     {
         List<MavenFlag> residual = new ArrayList<>();
 
+        Set<String> advertisedOptions =
+            MavenOptionCatalog.getInstance(project).optionsOf(installation, request.jreName);
+
         for (MavenFlag flag : request.flags)
         {
-            if (!isNativelyMapped(flag) && flag.isSupportedBy(installation.getMavenVersion(), false))
+            if (!isNativelyMapped(flag) && flag.isSupportedBy(installation, advertisedOptions))
             {
                 residual.add(flag);
             }
@@ -224,8 +228,8 @@ public final class IdeaMavenEngine
         {
             case OFFLINE, UPDATE_SNAPSHOTS, NON_RECURSIVE, SHOW_ERRORS, SKIP_TESTS, STRICT_CHECKSUMS, LAX_CHECKSUMS ->
                 true;
-            case NO_SNAPSHOT_UPDATES, ALSO_MAKE, ALSO_MAKE_DEPENDENTS, BATCH_MODE, NO_TRANSFER_PROGRESS,
-                IGNORE_TRANSITIVE_REPOSITORIES, RESUME, NO_DAEMON ->
+            case NO_SNAPSHOT_UPDATES, UPDATE_ARTIFACTS, UPDATE_METADATA, ALSO_MAKE, ALSO_MAKE_DEPENDENTS,
+                BATCH_MODE, NO_TRANSFER_PROGRESS, IGNORE_TRANSITIVE_REPOSITORIES, RESUME, NO_DAEMON ->
                 false;
         };
     }
