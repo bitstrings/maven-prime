@@ -152,6 +152,41 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.4.0</b>
+      <ul>
+        <li>
+          <b>Command line</b>: the options on offer are the ones your Maven actually accepts. Maven Prime
+          asks the Maven you pointed it at rather than working it out from a version number, so
+          <code>-UA</code> and <code>-UM</code> show up on the Maven versions that carry them and the
+          daemon offers what the daemon has. A Maven that cannot be asked keeps every flag available
+          instead of quietly losing some.
+        </li>
+        <li>
+          <b>Build context</b>: <b>Apply to the IDE Maven Import</b> takes back only what it put there. If
+          you had already typed the same property into the IDE importer VM options yourself, yours was the
+          copy that got deleted, and the one Maven Prime wrote stayed behind for good. Both now survive,
+          and only ours is removed.
+        </li>
+        <li>
+          <b>Profiler</b>: a repository can no longer account for more of the build than the build lasted.
+          Files come down from one repository side by side, and adding their times together counted the
+          same seconds over and over. The share now reads the stretch the connection was really busy;
+          <b>Transfer</b> still totals the time spent on each file.
+        </li>
+        <li>
+          Cancel a build and the timeline still names its rows <b>Worker 1</b>, <b>Worker 2</b> and so on,
+          instead of falling back to whatever number the JVM happened to give the thread.
+        </li>
+        <li>
+          <b>Model</b>: resolved values stay in POMs. Any XML file that happened to sit inside a Maven
+          module was being annotated with that module's values.
+        </li>
+        <li>
+          Maven Prime no longer trips the IDE slow-operation warning while POMs are open, and closing a
+          project with a POM open no longer raises an internal error.
+        </li>
+      </ul>
+
       <b>1.3.0</b>
       <ul>
         <li>
