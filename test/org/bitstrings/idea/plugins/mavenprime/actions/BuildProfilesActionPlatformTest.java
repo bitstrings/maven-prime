@@ -6,8 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.bitstrings.idea.plugins.mavenprime.context.BuildContext;
+import org.bitstrings.idea.plugins.mavenprime.context.BuildContextProperties;
 import org.bitstrings.idea.plugins.mavenprime.ui.ProfileListPanel;
+import org.junit.experimental.categories.Category;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
@@ -17,6 +20,7 @@ import com.intellij.openapi.util.Disposer;
 import com.intellij.testFramework.TestActionEvent;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
+@Category(NeedsOwnJvm.class)
 public class BuildProfilesActionPlatformTest
     extends BasePlatformTestCase
 {
@@ -30,7 +34,7 @@ public class BuildProfilesActionPlatformTest
     {
         try
         {
-            BuildContext.getInstance(getProject()).clearOverrides();
+            BuildContext.getInstance(getProject()).loadState(new BuildContextProperties());
         }
         finally
         {

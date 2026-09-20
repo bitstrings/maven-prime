@@ -1,6 +1,8 @@
 package org.bitstrings.idea.plugins.mavenprime.editor;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.jetbrains.idea.maven.project.MavenProject;
+import org.junit.experimental.categories.Category;
 
 import com.intellij.maven.testFramework.MavenImportingTestCase;
 import com.intellij.openapi.application.ApplicationManager;
@@ -9,6 +11,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.xml.XmlFile;
 
+@Category(NeedsOwnJvm.class)
 public class PomModulesImportingTest
     extends MavenImportingTestCase
 {

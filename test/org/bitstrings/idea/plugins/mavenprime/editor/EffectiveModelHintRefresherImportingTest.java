@@ -2,13 +2,16 @@ package org.bitstrings.idea.plugins.mavenprime.editor;
 
 import java.util.List;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
+import org.junit.experimental.categories.Category;
 
 import com.intellij.maven.testFramework.MavenImportingTestCase;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.util.PsiModificationTracker;
 
+@Category(NeedsOwnJvm.class)
 public class EffectiveModelHintRefresherImportingTest
     extends MavenImportingTestCase
 {

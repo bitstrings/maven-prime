@@ -18,15 +18,6 @@ public class BuildContextPlatformTest
     extends BasePlatformTestCase
 {
     @Override
-    protected void setUp()
-        throws Exception
-    {
-        super.setUp();
-
-        MavenProjectsManager.getInstance(getProject()).initForTests();
-    }
-
-    @Override
     protected void tearDown()
         throws Exception
     {

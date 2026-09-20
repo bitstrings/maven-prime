@@ -1,6 +1,8 @@
 package org.bitstrings.idea.plugins.mavenprime.editor;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
+import org.junit.experimental.categories.Category;
 
 import com.intellij.codeInsight.hints.declarative.InlayHintsCollector;
 import com.intellij.maven.testFramework.MavenImportingTestCase;
@@ -10,6 +12,7 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiManager;
 
+@Category(NeedsOwnJvm.class)
 public class PomEffectiveModelHintsImportingTest
     extends MavenImportingTestCase
 {

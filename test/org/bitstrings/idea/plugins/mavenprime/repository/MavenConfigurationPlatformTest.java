@@ -32,8 +32,6 @@ public class MavenConfigurationPlatformTest
     {
         super.setUp();
 
-        MavenProjectsManager.getInstance(getProject()).initForTests();
-
         workspace = FileUtil.createTempDirectory("mavenprime", getName());
     }
 

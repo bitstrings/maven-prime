@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.testing.junit.JUnitOptions
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
@@ -119,19 +120,10 @@ tasks.buildSearchableOptions {
     }
 }
 
-// Cannot share a JVM. The importing tests close the reused light project and the two action gates assert on
-// a project Maven has not taken over, which any reimport ends. The last two ask for a Java light project,
-// and that switch closes the shared one, disposing a MavenProjectsManager the suite left uninitialized.
-val isolatedTests =
-    listOf(
-        "*ImportingTest",
-        "*BuildProfilesActionPlatformTest",
-        "*MavenPrimeActionGroupPlatformTest",
-        "*RunTestWithMavenPrimeGutterPlatformTest",
-        "*TestSelectionsPlatformTest")
+val needsOwnJvm = "org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm"
 
-fun Test.platformTestDefaults() {
-    useJUnit()
+fun Test.platformTestDefaults(categories: JUnitOptions.() -> Unit) {
+    useJUnit { categories() }
 
     maxHeapSize = "2g"
 
@@ -148,9 +140,7 @@ fun Test.platformTestDefaults() {
 }
 
 tasks.test {
-    platformTestDefaults()
-
-    filter { isolatedTests.forEach { excludeTestsMatching(it) } }
+    platformTestDefaults { excludeCategories(needsOwnJvm) }
 }
 
 intellijPlatformTesting {
@@ -161,11 +151,7 @@ intellijPlatformTesting {
             testFramework(TestFrameworkType.Plugin.Maven)
 
             task {
-                platformTestDefaults()
-
-                forkEvery = 1
-
-                filter { isolatedTests.forEach { includeTestsMatching(it) } }
+                platformTestDefaults { includeCategories(needsOwnJvm) }
             }
         }
     }

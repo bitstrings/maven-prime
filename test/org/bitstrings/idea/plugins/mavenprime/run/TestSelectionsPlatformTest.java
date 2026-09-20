@@ -1,11 +1,15 @@
 package org.bitstrings.idea.plugins.mavenprime.run;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
+import org.junit.experimental.categories.Category;
+
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
 
+@Category(NeedsOwnJvm.class)
 public class TestSelectionsPlatformTest
     extends LightJavaCodeInsightFixtureTestCase
 {

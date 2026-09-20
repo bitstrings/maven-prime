@@ -1,9 +1,12 @@
 package org.bitstrings.idea.plugins.mavenprime.model;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.bitstrings.idea.plugins.mavenprime.settings.MavenPrimeSettings;
+import org.junit.experimental.categories.Category;
 
 import com.intellij.maven.testFramework.MavenImportingTestCase;
 
+@Category(NeedsOwnJvm.class)
 public class ModelRefresherImportingTest
     extends MavenImportingTestCase
 {

@@ -2,8 +2,12 @@ package org.bitstrings.idea.plugins.mavenprime.ui;
 
 import java.util.List;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
+import org.junit.experimental.categories.Category;
+
 import com.intellij.maven.testFramework.MavenImportingTestCase;
 
+@Category(NeedsOwnJvm.class)
 public class ProjectsSelectorsImportingTest
     extends MavenImportingTestCase
 {

@@ -30,8 +30,6 @@ public class LocalRepositoryLocatorPlatformTest
     {
         super.setUp();
 
-        MavenProjectsManager.getInstance(getProject()).initForTests();
-
         workspace = FileUtil.createTempDirectory("mavenprime", getName());
     }
 

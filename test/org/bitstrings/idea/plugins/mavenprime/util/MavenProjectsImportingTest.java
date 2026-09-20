@@ -4,12 +4,15 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.jetbrains.idea.maven.project.MavenProject;
+import org.junit.experimental.categories.Category;
 
 import com.intellij.maven.testFramework.MavenImportingTestCase;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.vfs.VirtualFile;
 
+@Category(NeedsOwnJvm.class)
 public class MavenProjectsImportingTest
     extends MavenImportingTestCase
 {

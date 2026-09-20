@@ -1,8 +1,12 @@
 package org.bitstrings.idea.plugins.mavenprime.run;
 
+import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
+import org.junit.experimental.categories.Category;
+
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
 
+@Category(NeedsOwnJvm.class)
 public class RunTestWithMavenPrimeGutterPlatformTest
     extends LightJavaCodeInsightFixtureTestCase
 {
