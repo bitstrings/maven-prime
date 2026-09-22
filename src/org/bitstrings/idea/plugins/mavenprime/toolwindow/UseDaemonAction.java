@@ -13,6 +13,7 @@ import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallationServ
 import org.bitstrings.idea.plugins.mavenprime.ui.ProjectToggleAction;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 
 public final class UseDaemonAction
@@ -27,8 +28,28 @@ public final class UseDaemonAction
     @Override
     protected void setSelectedIn(Project project, boolean selected)
     {
-        DistributionSpec target = selected ? firstDaemon(project) : DistributionSpec.ide();
+        if (!selected)
+        {
+            applyDistribution(project, DistributionSpec.ide());
 
+            return;
+        }
+
+        ApplicationManager
+            .getApplication()
+            .executeOnPooledThread(
+                () ->
+                {
+                    DistributionSpec target = firstDaemon(project);
+
+                    ApplicationManager
+                        .getApplication()
+                        .invokeLater(() -> applyDistribution(project, target), project.getDisposed());
+                });
+    }
+
+    private static void applyDistribution(Project project, DistributionSpec target)
+    {
         if (target == null)
         {
             MavenPrimeNotifications.warning(
