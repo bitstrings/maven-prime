@@ -5,6 +5,7 @@ import org.bitstrings.idea.plugins.mavenprime.model.ModelOrigin;
 import com.intellij.codeInsight.hints.declarative.InlayActionHandler;
 import com.intellij.codeInsight.hints.declarative.InlayActionPayload;
 import com.intellij.codeInsight.hints.declarative.StringInlayActionPayload;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.event.EditorMouseEvent;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
@@ -31,11 +32,26 @@ public final class ModelOriginNavigator
             return;
         }
 
+        ApplicationManager
+            .getApplication()
+            .executeOnPooledThread(() -> navigateTo(project, origin));
+    }
+
+    private static void navigateTo(Project project, ModelOrigin origin)
+    {
         VirtualFile declaringFile = LocalFileSystem.getInstance().refreshAndFindFileByPath(origin.file());
 
-        if (declaringFile != null)
+        if (declaringFile == null)
         {
-            new OpenFileDescriptor(project, declaringFile, Math.max(0, origin.line() - 1), 0).navigate(true);
+            return;
         }
+
+        ApplicationManager
+            .getApplication()
+            .invokeLater(
+                () ->
+                    new OpenFileDescriptor(project, declaringFile, Math.max(0, origin.line() - 1), 0)
+                        .navigate(true),
+                project.getDisposed());
     }
 }
