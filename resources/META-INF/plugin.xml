@@ -152,6 +152,17 @@
     ]]></description>
 
     <change-notes><![CDATA[
+      <b>1.5.0</b>
+      <ul>
+        <li>
+          The interface stays responsive while Maven Prime looks things up. Running a goal asked your
+          Maven which options it accepts, clicking an effective value went to disk for the POM that
+          declares it, and turning <b>Use Maven Daemon</b> on went hunting for a daemon to run. Each of
+          those ran on the thread that draws the interface, so everything stopped until the answer came
+          back, and the first of them wrote an internal error to the log while it waited.
+        </li>
+      </ul>
+
       <b>1.4.0</b>
       <ul>
         <li>
