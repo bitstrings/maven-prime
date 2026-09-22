@@ -95,12 +95,14 @@ public final class MavenPrimeExecutor
             return false;
         }
 
-        MavenInstallation installation = resolveWithProgress(effectiveRequest, mode);
+        ResolvedDistribution resolved = resolveWithProgress(effectiveRequest, mode);
 
-        if (installation == null)
+        if (resolved == null)
         {
             return false;
         }
+
+        MavenInstallation installation = resolved.installation();
 
         if (!installation.isValid())
         {
@@ -114,7 +116,7 @@ public final class MavenPrimeExecutor
                 + " daemon=" + installation.isDaemon()
                 + " home=" + installation.getHome());
 
-        warnAboutDroppedFlags(effectiveRequest, installation);
+        warnAboutDroppedFlags(effectiveRequest, installation, resolved.advertisedOptions());
 
         if (installation.isDaemon())
         {
@@ -126,7 +128,7 @@ public final class MavenPrimeExecutor
         try
         {
             RunnerAndConfigurationSettings settings =
-                new IdeaMavenEngine(project, session.handshake())
+                new IdeaMavenEngine(project, session.handshake(), resolved.advertisedOptions())
                     .createSettings(effectiveRequest, installation);
 
             SpySessionAttachment attachment =
@@ -151,9 +153,9 @@ public final class MavenPrimeExecutor
         }
     }
 
-    private MavenInstallation resolveWithProgress(MavenPrimeRequest request, ExecutionMode mode)
+    private ResolvedDistribution resolveWithProgress(MavenPrimeRequest request, ExecutionMode mode)
     {
-        AtomicReference<MavenInstallation> resolved = new AtomicReference<>();
+        AtomicReference<ResolvedDistribution> resolved = new AtomicReference<>();
 
         boolean completed =
             ProgressManager
@@ -167,13 +169,21 @@ public final class MavenPrimeExecutor
         return completed ? resolved.get() : null;
     }
 
-    private MavenInstallation resolveFor(MavenPrimeRequest request, ExecutionMode mode)
+    private ResolvedDistribution resolveFor(MavenPrimeRequest request, ExecutionMode mode)
     {
         MavenInstallation installation = resolve(request.distribution, request.workingDirectory);
 
-        return (mode.isDebug() && installation.isDaemon())
-            ? switchToEmbeddedMaven(request, installation)
-            : installation;
+        MavenInstallation effective =
+            (mode.isDebug() && installation.isDaemon())
+                ? switchToEmbeddedMaven(request, installation)
+                : installation;
+
+        return new ResolvedDistribution(
+            effective, MavenOptionCatalog.getInstance(project).optionsOf(effective, request.jreName));
+    }
+
+    private record ResolvedDistribution(MavenInstallation installation, Set<String> advertisedOptions)
+    {
     }
 
     private boolean launch(
@@ -346,15 +356,13 @@ public final class MavenPrimeExecutor
         return installation;
     }
 
-    private void warnAboutDroppedFlags(MavenPrimeRequest request, MavenInstallation installation)
+    private void warnAboutDroppedFlags(
+        MavenPrimeRequest request, MavenInstallation installation, Set<String> advertisedOptions)
     {
         MavenVersion mavenVersion = installation.getMavenVersion();
 
         Set<MavenFlag> dropped =
-            CommandLineRenderer.unsupportedFlags(
-                request.flags,
-                installation,
-                MavenOptionCatalog.getInstance(project).optionsOf(installation, request.jreName));
+            CommandLineRenderer.unsupportedFlags(request.flags, installation, advertisedOptions);
 
         for (MavenFlag flag : dropped)
         {

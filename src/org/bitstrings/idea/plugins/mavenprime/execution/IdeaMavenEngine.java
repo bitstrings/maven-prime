@@ -37,10 +37,13 @@ public final class IdeaMavenEngine
 
     private final SpyHandshake handshake;
 
-    public IdeaMavenEngine(Project project, SpyHandshake handshake)
+    private final Set<String> advertisedOptions;
+
+    public IdeaMavenEngine(Project project, SpyHandshake handshake, Set<String> advertisedOptions)
     {
         this.project = project;
         this.handshake = handshake;
+        this.advertisedOptions = advertisedOptions;
     }
 
     @Override
@@ -196,9 +199,6 @@ public final class IdeaMavenEngine
     private List<String> residualOptions(MavenPrimeRequest request, MavenInstallation installation)
     {
         List<MavenFlag> residual = new ArrayList<>();
-
-        Set<String> advertisedOptions =
-            MavenOptionCatalog.getInstance(project).optionsOf(installation, request.jreName);
 
         for (MavenFlag flag : request.flags)
         {

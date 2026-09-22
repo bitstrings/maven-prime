@@ -2,6 +2,7 @@ package org.bitstrings.idea.plugins.mavenprime.execution;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.bitstrings.idea.plugins.mavenprime.build.SpyHandshake;
 import org.bitstrings.idea.plugins.mavenprime.distribution.MavenInstallation;
@@ -12,6 +13,7 @@ import org.jetbrains.idea.maven.execution.MavenRunConfiguration;
 import com.intellij.execution.RunnerAndConfigurationSettings;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
+import com.intellij.util.execution.ParametersListUtil;
 
 public class IdeaMavenEnginePlatformTest
     extends BasePlatformTestCase
@@ -35,7 +37,9 @@ public class IdeaMavenEnginePlatformTest
     {
         MavenPrimeSettings.getInstance(getProject()).colorConsole = true;
 
-        assertTrue(cmdOptions(), cmdOptions().contains("-Dstyle.color=always"));
+        List<String> options = cmdOptions(request(), Set.of());
+
+        assertTrue(options.toString(), options.contains("-Dstyle.color=always"));
     }
 
     public void testCreateSettings_colorConsoleOff_asksMavenForNoColor()
@@ -43,16 +47,44 @@ public class IdeaMavenEnginePlatformTest
     {
         MavenPrimeSettings.getInstance(getProject()).colorConsole = false;
 
-        assertTrue(cmdOptions(), cmdOptions().contains("-Dstyle.color=never"));
+        List<String> options = cmdOptions(request(), Set.of());
+
+        assertTrue(options.toString(), options.contains("-Dstyle.color=never"));
     }
 
-    private String cmdOptions()
+    public void testCreateSettings_aFlagTheLauncherAdvertises_rendersIt()
+        throws IOException
+    {
+        MavenPrimeRequest request = request();
+
+        request.flags.add(MavenFlag.RESUME);
+
+        List<String> options = cmdOptions(request, Set.of("-r"));
+
+        assertTrue(options.toString(), options.contains("-r"));
+    }
+
+    public void testCreateSettings_aFlagTheLauncherNeverAdvertised_dropsIt()
+        throws IOException
+    {
+        MavenPrimeRequest request = request();
+
+        request.flags.add(MavenFlag.RESUME);
+
+        List<String> options = cmdOptions(request, Set.of("-o"));
+
+        assertFalse(options.toString(), options.contains("-r"));
+    }
+
+    private List<String> cmdOptions(MavenPrimeRequest request, Set<String> advertisedOptions)
         throws IOException
     {
         RunnerAndConfigurationSettings settings =
-            new IdeaMavenEngine(getProject(), SpyHandshake.NONE).createSettings(request(), installation());
+            new IdeaMavenEngine(getProject(), SpyHandshake.NONE, advertisedOptions)
+                .createSettings(request, installation());
 
-        return ((MavenRunConfiguration) settings.getConfiguration()).getRunnerParameters().getCmdOptions();
+        return ParametersListUtil.parse(
+            ((MavenRunConfiguration) settings.getConfiguration()).getRunnerParameters().getCmdOptions());
     }
 
     private static MavenPrimeRequest request()
@@ -61,7 +93,7 @@ public class IdeaMavenEnginePlatformTest
         MavenPrimeRequest request =
             MavenPrimeRequest.in(FileUtil.createTempDirectory("mavenprime", "work").getPath(), List.of("verify"));
 
-        request.name = "color";
+        request.name = "engine";
 
         return request;
     }
