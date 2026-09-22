@@ -1,8 +1,6 @@
 package org.bitstrings.idea.plugins.mavenprime.actions;
 
-import org.bitstrings.idea.plugins.mavenprime.NeedsOwnJvm;
 import org.jetbrains.idea.maven.project.MavenProjectsManager;
-import org.junit.experimental.categories.Category;
 
 import com.intellij.openapi.actionSystem.ActionUiKind;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -11,7 +9,6 @@ import com.intellij.openapi.actionSystem.Presentation;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 
-@Category(NeedsOwnJvm.class)
 public class MavenPrimeActionGroupPlatformTest
     extends BasePlatformTestCase
 {
