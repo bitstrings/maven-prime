@@ -20,6 +20,18 @@ public class MavenPrimeConfigServicePlatformTest
     extends BasePlatformTestCase
 {
     @Override
+    protected void setUp()
+        throws Exception
+    {
+        super.setUp();
+
+        assertNotNull(
+            "the light fixture leaves the project root off disk and out of the VFS, so every test here "
+                + "would be resolving the directory it writes to against whatever ran before it",
+            TestConfigFile.ensureRoot(getProject()));
+    }
+
+    @Override
     protected void tearDown()
         throws Exception
     {

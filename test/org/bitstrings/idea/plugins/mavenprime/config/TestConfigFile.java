@@ -21,7 +21,7 @@ public final class TestConfigFile
     {
         MavenPrimeConfigService service = MavenPrimeConfigService.getInstance(project);
 
-        VirtualFile directory = loadRootIntoVfs(project);
+        VirtualFile directory = ensureRoot(project);
 
         if (directory == null)
         {
@@ -59,7 +59,7 @@ public final class TestConfigFile
     {
         MavenPrimeConfigService service = MavenPrimeConfigService.getInstance(project);
 
-        loadRootIntoVfs(project);
+        ensureRoot(project);
 
         VirtualFile file = service.findConfigFile();
 
@@ -71,7 +71,7 @@ public final class TestConfigFile
         service.invalidate();
     }
 
-    private static VirtualFile loadRootIntoVfs(Project project)
+    public static VirtualFile ensureRoot(Project project)
         throws IOException
     {
         String basePath = project.getBasePath();

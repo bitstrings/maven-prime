@@ -24,14 +24,12 @@ public final class MavenProjects
     {
         MavenProjectsManager manager = MavenProjectsManager.getInstanceIfCreated(project);
 
-        return (manager != null) && manager.isMavenizedProject();
+        return (manager != null) && manager.isMavenizedProject() && manager.hasProjects();
     }
 
     public static boolean isPossiblyMavenized(Project project)
     {
-        MavenProjectsManager manager = MavenProjectsManager.getInstanceIfCreated(project);
-
-        return (manager == null) || manager.isMavenizedProject();
+        return (MavenProjectsManager.getInstanceIfCreated(project) == null) || isMavenized(project);
     }
 
     public static List<MavenProject> all(Project project)
